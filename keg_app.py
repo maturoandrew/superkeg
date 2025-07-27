@@ -21,6 +21,7 @@ class Keg(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     style = Column(String, nullable=False)
+    brewer = Column(String, nullable=False)
     abv = Column(Float, nullable=False)
     volume_remaining = Column(Float, nullable=False)
     date_created = Column(DateTime, default=datetime.utcnow)
@@ -31,10 +32,11 @@ class Keg(Base):
 # Create tables
 Base.metadata.create_all(bind=engine)
 
-def input_new_keg(session, name, style, abv, volume_remaining):
+def input_new_keg(session, name, style, brewer, abv, volume_remaining):
     new_keg = Keg(
         name=name,
         style=style,
+        brewer=brewer,
         abv=abv,
         volume_remaining=volume_remaining,
         date_created=datetime.utcnow(),

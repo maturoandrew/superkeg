@@ -16,19 +16,21 @@ template = '''
     <form method="post" action="/add">
         <div class="mb-2"><input class="form-control" name="name" placeholder="Name" required></div>
         <div class="mb-2"><input class="form-control" name="style" placeholder="Style" required></div>
+        <div class="mb-2"><input class="form-control" name="brewer" placeholder="Brewer" required></div>
         <div class="mb-2"><input class="form-control" name="abv" placeholder="ABV (%)" type="number" step="0.1" required></div>
         <div class="mb-2"><input class="form-control" name="volume_remaining" placeholder="Volume (L)" type="number" step="0.1" required></div>
         <button class="btn btn-primary" type="submit">Add Keg</button>
     </form>
     <h2 class="mt-4">All Kegs</h2>
     <table class="table table-bordered">
-        <thead><tr><th>ID</th><th>Name</th><th>Style</th><th>ABV</th><th>Volume</th><th>Status</th><th>Last Tapped</th><th>Finished</th><th>Actions</th></tr></thead>
+        <thead><tr><th>ID</th><th>Name</th><th>Style</th><th>Brewer</th><th>ABV</th><th>Volume</th><th>Status</th><th>Last Tapped</th><th>Finished</th><th>Actions</th></tr></thead>
         <tbody>
         {% for keg in kegs %}
         <tr>
             <td>{{ keg.id }}</td>
             <td>{{ keg.name }}</td>
             <td>{{ keg.style }}</td>
+            <td>{{ keg.brewer }}</td>
             <td>{{ keg.abv }}</td>
             <td>{{ keg.volume_remaining }}</td>
             <td>{{ keg.status.value }}</td>
@@ -72,6 +74,7 @@ display_template = '''
             <div class="card">
                 <div class="card-body">
                     <h2 class="card-title">{{ keg.name }}</h2>
+                    <p class="card-text"><strong>Brewer:</strong> {{ keg.brewer }}</p>
                     <p class="card-text"><strong>Style:</strong> {{ keg.style }}</p>
                     <p class="card-text"><strong>ABV:</strong> {{ keg.abv }}%</p>
                     <p class="card-text"><strong>Volume Remaining:</strong> {{ keg.volume_remaining }} L</p>
@@ -101,6 +104,7 @@ def add_keg():
         session,
         name=request.form["name"],
         style=request.form["style"],
+        brewer=request.form["brewer"],
         abv=float(request.form["abv"]),
         volume_remaining=float(request.form["volume_remaining"])
     )

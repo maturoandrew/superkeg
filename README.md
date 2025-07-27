@@ -5,14 +5,14 @@ Superkeg is a Python application for managing and monitoring beer kegs, designed
 
 ## Current Capabilities
 - **Web UI (Flask):**
-  - View all kegs and their details (name, style, ABV, volume, status, dates)
-  - Add a new keg to the database
+  - View all kegs and their details (name, style, brewer, ABV, volume, status, dates)
+  - Add a new keg to the database (including brewer information)
   - Tap a new keg, tap a previously tapped keg, or take a keg off tap
   - Tablet-friendly display page (`/display`) showing all currently tapped kegs, auto-refreshing every 10 seconds
   - Button to view the full catalog from the display page
 - **Database:**
   - Uses SQLite for local storage (file: `kegs.db`)
-  - Keg model includes: name, style, ABV, volume remaining, date created, date last tapped, date finished, and status
+  - Keg model includes: name, style, brewer, ABV, volume remaining, date created, date last tapped, date finished, and status
 - **API:**
   - `/api/flow/<keg_id>` (POST): Accepts JSON `{ "volume_dispensed": float }` to subtract volume from a tapped keg (for flow meter integration)
 
