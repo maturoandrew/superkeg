@@ -1,5 +1,6 @@
 from flask import Flask, render_template_string, request, redirect, url_for, jsonify
 from keg_app import SessionLocal, input_new_keg, tap_new_keg, tap_previous_keg, take_keg_off_tap, Keg, KegStatus, subtract_volume
+import random
 
 app = Flask(__name__)
 
@@ -90,6 +91,43 @@ display_template = '''
 </html>
 '''
 
+def get_cheers_message():
+    cheers_messages = [
+        "Cheers! 🍻",
+        "Prost! 🍺",
+        "Salud! 🥂",
+        "Skål! 🍷",
+        "Cheers mate! 🍻",
+        "Here's to you! 🥃",
+        "Bottoms up! 🍺",
+        "Cheers to that! 🍻",
+        "Here's looking at you! 🥂",
+        "Sláinte! 🍺"
+    ]
+    return random.choice(cheers_messages)
+
+def get_pour_comment(volume_oz):
+    if volume_oz < 5:
+        sample_messages = [
+            "Oh, just a sample? 😏",
+            "Tasting flight size! 🍷",
+            "Just a little sip? 😄",
+            "Keeping it light! 🍺",
+            "Sample size pour! 🥃"
+        ]
+        return random.choice(sample_messages)
+    elif volume_oz > 12:
+        generous_messages = [
+            "Now that's a generous pour! 🍻",
+            "Going big! 🍺",
+            "That's a proper pint! 🥃",
+            "Living large! 🍻",
+            "Now we're talking! 🍺"
+        ]
+        return random.choice(generous_messages)
+    else:
+        return ""
+
 @app.route("/")
 def index():
     session = SessionLocal()
@@ -148,11 +186,26 @@ def flow_update(keg_id):
         volume_dispensed = float(data['volume_dispensed'])
     except (ValueError, TypeError):
         return jsonify({'success': False, 'error': 'Invalid volume_dispensed'}), 400
+    
     session = SessionLocal()
     keg = subtract_volume(session, keg_id, volume_dispensed)
     session.close()
+    
     if keg:
-        return jsonify({'success': True, 'keg_id': keg.id, 'volume_remaining': keg.volume_remaining}), 200
+        # Convert to ounces for message logic (assuming volume_dispensed is in liters)
+        volume_oz = volume_dispensed * 33.814  # Convert liters to ounces
+        
+        cheers_msg = get_cheers_message()
+        pour_comment = get_pour_comment(volume_oz)
+        
+        response = {
+            'success': True, 
+            'keg_id': keg.id, 
+            'volume_remaining': keg.volume_remaining,
+            'message': cheers_msg,
+            'pour_comment': pour_comment
+        }
+        return jsonify(response), 200
     else:
         return jsonify({'success': False, 'error': 'Keg not found or not tapped'}), 404
 
