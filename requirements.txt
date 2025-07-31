@@ -1,3 +1,2 @@
 SQLAlchemy
-psycopg2-binary 
 Flask 
