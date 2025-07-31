@@ -13,7 +13,41 @@ template = '''
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="container py-4">
-    <h1>Keg Manager</h1>
+    <h1>Currently Tapped Kegs</h1>
+    <a href="/manage" class="btn btn-primary mb-4">Keg Management</a>
+    <div class="row">
+    {% for keg in kegs %}
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="card-title">{{ keg.name }}</h2>
+                    <p class="card-text"><strong>Brewer:</strong> {{ keg.brewer }}</p>
+                    <p class="card-text"><strong>Style:</strong> {{ keg.style }}</p>
+                    <p class="card-text"><strong>ABV:</strong> {{ keg.abv }}%</p>
+                    <p class="card-text"><strong>Volume Remaining:</strong> {{ keg.volume_remaining }} L</p>
+                    <p class="card-text"><strong>Last Tapped:</strong> {{ keg.date_last_tapped or 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <p>No kegs are currently tapped.</p>
+    {% endfor %}
+    </div>
+</body>
+</html>
+'''
+
+management_template = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Keg Management</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container py-4">
+    <h1>Keg Management</h1>
+    <a href="/" class="btn btn-secondary mb-4">Back to Tapped Kegs</a>
+    
     <h2>Add New Keg</h2>
     <form method="post" action="/add">
         <div class="mb-2"><input class="form-control" name="name" placeholder="Name" required></div>
@@ -23,6 +57,7 @@ template = '''
         <div class="mb-2"><input class="form-control" name="volume_remaining" placeholder="Volume (L)" type="number" step="0.1" required></div>
         <button class="btn btn-primary" type="submit">Add Keg</button>
     </form>
+    
     <h2 class="mt-4">All Kegs</h2>
     <table class="table table-bordered">
         <thead><tr><th>ID</th><th>Name</th><th>Style</th><th>Brewer</th><th>ABV</th><th>Volume</th><th>Status</th><th>Last Tapped</th><th>Finished</th><th>Actions</th></tr></thead>
@@ -69,7 +104,7 @@ display_template = '''
 </head>
 <body class="container py-4">
     <h1>Currently Tapped Kegs</h1>
-    <a href="/" class="btn btn-secondary mb-4">View Full Catalog</a>
+    <a href="/manage" class="btn btn-secondary mb-4">Keg Management</a>
     <div class="row">
     {% for keg in kegs %}
         <div class="col-md-6 keg-card">
@@ -132,9 +167,16 @@ def get_pour_comment(volume_oz):
 @app.route("/")
 def index():
     session = SessionLocal()
-    kegs = session.query(Keg).all()
+    kegs = session.query(Keg).filter(Keg.status == KegStatus.TAPPED).all()
     session.close()
     return render_template_string(template, kegs=kegs, keg_status=KegStatus)
+
+@app.route("/manage")
+def manage():
+    session = SessionLocal()
+    kegs = session.query(Keg).all()
+    session.close()
+    return render_template_string(management_template, kegs=kegs, keg_status=KegStatus)
 
 @app.route("/add", methods=["POST"])
 def add_keg():
@@ -148,28 +190,28 @@ def add_keg():
         volume_remaining=float(request.form["volume_remaining"])
     )
     session.close()
-    return redirect(url_for("index"))
+    return redirect(url_for("manage"))
 
 @app.route("/tap_new/<int:keg_id>")
 def tap_new(keg_id):
     session = SessionLocal()
     tap_new_keg(session, keg_id)
     session.close()
-    return redirect(url_for("index"))
+    return redirect(url_for("manage"))
 
 @app.route("/tap_previous/<int:keg_id>")
 def tap_previous(keg_id):
     session = SessionLocal()
     tap_previous_keg(session, keg_id)
     session.close()
-    return redirect(url_for("index"))
+    return redirect(url_for("manage"))
 
 @app.route("/off_tap/<int:keg_id>")
 def off_tap(keg_id):
     session = SessionLocal()
     take_keg_off_tap(session, keg_id)
     session.close()
-    return redirect(url_for("index"))
+    return redirect(url_for("manage"))
 
 @app.route("/display")
 def display():
