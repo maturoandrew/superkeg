@@ -1,9 +1,47 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, render_template_string, request, redirect, url_for, jsonify
-from keg_app import SessionLocal, input_new_keg, tap_new_keg, tap_previous_keg, take_keg_off_tap, Keg, KegStatus, subtract_volume
+from flask import Flask, render_template_string, request, redirect, url_for, jsonify, send_file, Response
+import csv
+import os
+from keg_app import SessionLocal, input_new_keg, tap_new_keg, tap_previous_keg, take_keg_off_tap, Keg, KegStatus, subtract_volume, log_pour_event, PourEvent
 import random
+from datetime import datetime
 
 app = Flask(__name__)
+
+# Add dark mode CSS and toggle to all templates
+DARK_MODE_HEAD = '''
+<style id="dark-mode-style">
+:root[data-theme='dark'] {
+  --bs-body-bg: #181a1b;
+  --bs-body-color: #f8f9fa;
+  --bs-card-bg: #23272b;
+  --bs-card-color: #f8f9fa;
+  --bs-border-color: #444;
+}
+[data-theme='dark'] body { background: var(--bs-body-bg) !important; color: var(--bs-body-color) !important; }
+[data-theme='dark'] .card { background: var(--bs-card-bg) !important; color: var(--bs-card-color) !important; border-color: var(--bs-border-color) !important; }
+[data-theme='dark'] .table { color: var(--bs-body-color) !important; }
+[data-theme='dark'] .btn { color: #fff !important; }
+</style>
+<script>
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+}
+function toggleTheme() {
+  const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  setTheme(theme);
+  document.getElementById('theme-toggle').innerText = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+}
+window.onload = function() {
+  let theme = localStorage.getItem('theme') || 'light';
+  setTheme(theme);
+  if (document.getElementById('theme-toggle')) {
+    document.getElementById('theme-toggle').innerText = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+  }
+}
+</script>
+'''
 
 template = '''
 <!DOCTYPE html>
@@ -11,22 +49,32 @@ template = '''
 <head>
     <title>Keg Manager</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .keg-row { display: flex; flex-wrap: nowrap; justify-content: center; }
+        .keg-card { flex: 1 1 0; max-width: 25%; min-width: 220px; margin: 0 1rem; }
+        .low-volume { border: 3px solid #dc3545 !important; box-shadow: 0 0 10px #dc3545; }
+        .tap-label { font-weight: bold; font-size: 1.2rem; color: #0d6efd; text-align: center; margin-bottom: 0.5rem; }
+        @media (max-width: 900px) {
+            .keg-row { flex-wrap: wrap; }
+            .keg-card { max-width: 100%; margin: 1rem 0; }
+        }
+    </style>
 </head>
 <body class="container py-4">
+    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">🌙 Dark Mode</button>
     <h1>Currently Tapped Kegs</h1>
     <a href="/manage" class="btn btn-primary mb-4">Keg Management</a>
-    <div class="row">
+    <div class="keg-row">
     {% for keg in kegs %}
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h2 class="card-title">{{ keg.name }}</h2>
-                    <p class="card-text"><strong>Brewer:</strong> {{ keg.brewer }}</p>
-                    <p class="card-text"><strong>Style:</strong> {{ keg.style }}</p>
-                    <p class="card-text"><strong>ABV:</strong> {{ keg.abv }}%</p>
-                    <p class="card-text"><strong>Volume Remaining:</strong> {{ keg.volume_remaining }} L</p>
-                    <p class="card-text"><strong>Last Tapped:</strong> {{ keg.date_last_tapped or 'N/A' }}</p>
-                </div>
+        <div class="card keg-card {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}low-volume{% endif %}">
+            <div class="tap-label">Tap {{ loop.index }}</div>
+            <div class="card-body">
+                <h2 class="card-title">{{ keg.name }} {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}<span title="Low Volume" style="color:#dc3545;">&#9888;</span>{% endif %}</h2>
+                <p class="card-text"><strong>Brewer:</strong> {{ keg.brewer }}</p>
+                <p class="card-text"><strong>Style:</strong> {{ keg.style }}</p>
+                <p class="card-text"><strong>ABV:</strong> {{ keg.abv }}%</p>
+                <p class="card-text"><strong>Volume Remaining:</strong> {{ keg.volume_remaining }} L</p>
+                <p class="card-text"><strong>Last Tapped:</strong> {{ keg.date_last_tapped or 'N/A' }}</p>
             </div>
         </div>
     {% else %}
@@ -43,8 +91,21 @@ management_template = '''
 <head>
     <title>Keg Management</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script>
+    function confirmDelete(kegId) {
+        if (confirm('Are you sure you want to permanently delete this keg?')) {
+            document.getElementById('delete-form-' + kegId).submit();
+        }
+    }
+    function confirmFinish(kegId) {
+        if (confirm('Mark this keg as finished?')) {
+            document.getElementById('finish-form-' + kegId).submit();
+        }
+    }
+    </script>
 </head>
 <body class="container py-4">
+    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">🌙 Dark Mode</button>
     <h1>Keg Management</h1>
     <a href="/" class="btn btn-secondary mb-4">Back to Tapped Kegs</a>
     
@@ -75,12 +136,21 @@ management_template = '''
             <td>{{ keg.date_finished or '' }}</td>
             <td>
                 {% if keg.status == keg_status.UNTAPPED %}
+                    <a href="/edit/{{ keg.id }}" class="btn btn-info btn-sm">Edit</a>
                     <a href="/tap_new/{{ keg.id }}" class="btn btn-success btn-sm">Tap New</a>
                 {% elif keg.status == keg_status.OFF_TAP %}
+                    <a href="/edit/{{ keg.id }}" class="btn btn-info btn-sm">Edit</a>
                     <a href="/tap_previous/{{ keg.id }}" class="btn btn-warning btn-sm">Tap Again</a>
                 {% elif keg.status == keg_status.TAPPED %}
+                    <a href="/edit/{{ keg.id }}" class="btn btn-info btn-sm">Edit</a>
                     <a href="/off_tap/{{ keg.id }}" class="btn btn-danger btn-sm">Take Off Tap</a>
+                    <form id="finish-form-{{ keg.id }}" method="post" action="/finish/{{ keg.id }}" style="display:inline;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="confirmFinish({{ keg.id }})">Finish</button>
+                    </form>
                 {% endif %}
+                <form id="delete-form-{{ keg.id }}" method="post" action="/delete/{{ keg.id }}" style="display:inline;">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete({{ keg.id }})">Delete</button>
+                </form>
             </td>
         </tr>
         {% endfor %}
@@ -99,30 +169,88 @@ display_template = '''
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <style>
         body { font-size: 1.5rem; }
-        .keg-card { margin-bottom: 2rem; }
+        .keg-row { display: flex; flex-wrap: nowrap; justify-content: center; }
+        .keg-card { flex: 1 1 0; max-width: 25%; min-width: 220px; margin: 0 1rem; }
+        .low-volume { border: 3px solid #dc3545 !important; box-shadow: 0 0 10px #dc3545; }
+        .tap-label { font-weight: bold; font-size: 1.2rem; color: #0d6efd; text-align: center; margin-bottom: 0.5rem; }
+        @media (max-width: 900px) {
+            .keg-row { flex-wrap: wrap; }
+            .keg-card { max-width: 100%; margin: 1rem 0; }
+        }
     </style>
 </head>
 <body class="container py-4">
+    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">🌙 Dark Mode</button>
     <h1>Currently Tapped Kegs</h1>
     <a href="/manage" class="btn btn-secondary mb-4">Keg Management</a>
-    <div class="row">
+    <div class="keg-row">
     {% for keg in kegs %}
-        <div class="col-md-6 keg-card">
-            <div class="card">
-                <div class="card-body">
-                    <h2 class="card-title">{{ keg.name }}</h2>
-                    <p class="card-text"><strong>Brewer:</strong> {{ keg.brewer }}</p>
-                    <p class="card-text"><strong>Style:</strong> {{ keg.style }}</p>
-                    <p class="card-text"><strong>ABV:</strong> {{ keg.abv }}%</p>
-                    <p class="card-text"><strong>Volume Remaining:</strong> {{ keg.volume_remaining }} L</p>
-                    <p class="card-text"><strong>Last Tapped:</strong> {{ keg.date_last_tapped or 'N/A' }}</p>
-                </div>
+        <div class="card keg-card {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}low-volume{% endif %}">
+            <div class="tap-label">Tap {{ loop.index }}</div>
+            <div class="card-body">
+                <h2 class="card-title">{{ keg.name }} {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}<span title="Low Volume" style="color:#dc3545;">&#9888;</span>{% endif %}</h2>
+                <p class="card-text"><strong>Brewer:</strong> {{ keg.brewer }}</p>
+                <p class="card-text"><strong>Style:</strong> {{ keg.style }}</p>
+                <p class="card-text"><strong>ABV:</strong> {{ keg.abv }}%</p>
+                <p class="card-text"><strong>Volume Remaining:</strong> {{ keg.volume_remaining }} L</p>
+                <p class="card-text"><strong>Last Tapped:</strong> {{ keg.date_last_tapped or 'N/A' }}</p>
             </div>
         </div>
     {% else %}
         <p>No kegs are currently tapped.</p>
     {% endfor %}
     </div>
+</body>
+</html>
+'''
+
+edit_keg_template = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Keg</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container py-4">
+    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">🌙 Dark Mode</button>
+    <h1>Edit Keg</h1>
+    <a href="/manage" class="btn btn-secondary mb-4">Back to Management</a>
+    <form method="post">
+        <div class="mb-2"><input class="form-control" name="name" placeholder="Name" value="{{ keg.name }}" required></div>
+        <div class="mb-2"><input class="form-control" name="style" placeholder="Style" value="{{ keg.style }}" required></div>
+        <div class="mb-2"><input class="form-control" name="brewer" placeholder="Brewer" value="{{ keg.brewer }}" required></div>
+        <div class="mb-2"><input class="form-control" name="abv" placeholder="ABV (%)" type="number" step="0.1" value="{{ keg.abv }}" required></div>
+        <div class="mb-2"><input class="form-control" name="volume_remaining" placeholder="Volume (L)" type="number" step="0.1" value="{{ keg.volume_remaining }}" required></div>
+        <div class="mb-2"><input class="form-control" name="original_volume" placeholder="Original Volume (L)" type="number" step="0.1" value="{{ keg.original_volume or keg.volume_remaining }}" required></div>
+        <button class="btn btn-primary" type="submit">Save Changes</button>
+    </form>
+</body>
+</html>
+'''
+
+history_template = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pour History</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container py-4">
+    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">🌙 Dark Mode</button>
+    <h1>Pour History</h1>
+    <a href="/manage" class="btn btn-secondary mb-4">Back to Management</a>
+    <table class="table table-bordered">
+        <thead><tr><th>Time</th><th>Keg</th><th>Volume (L)</th></tr></thead>
+        <tbody>
+        {% for event in events %}
+        <tr>
+            <td>{{ event.timestamp }}</td>
+            <td>{{ keg_map.get(event.keg_id, 'Unknown') }}</td>
+            <td>{{ '%.2f'|format(event.volume_dispensed) }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
 </body>
 </html>
 '''
@@ -163,6 +291,12 @@ def get_pour_comment(volume_oz):
         return random.choice(generous_messages)
     else:
         return ""
+
+def is_low_volume(keg):
+    orig = getattr(keg, 'original_volume', None)
+    if orig is None or orig == 0:
+        orig = keg.volume_remaining
+    return orig > 0 and keg.volume_remaining < 0.1 * orig
 
 @app.route("/")
 def index():
@@ -220,6 +354,15 @@ def display():
     session.close()
     return render_template_string(display_template, kegs=kegs)
 
+@app.route("/history")
+def pour_history():
+    session = SessionLocal()
+    events = session.query(PourEvent).order_by(PourEvent.timestamp.desc()).limit(100).all()
+    kegs = session.query(Keg).all()
+    keg_map = {k.id: f"{k.name} ({k.brewer})" for k in kegs}
+    session.close()
+    return render_template_string(history_template, events=events, keg_map=keg_map)
+
 @app.route('/api/flow/<int:keg_id>', methods=['POST'])
 def flow_update(keg_id):
     data = request.get_json()
@@ -232,6 +375,8 @@ def flow_update(keg_id):
     
     session = SessionLocal()
     keg = subtract_volume(session, keg_id, volume_dispensed)
+    if keg:
+        log_pour_event(session, keg_id, volume_dispensed)
     session.close()
     
     if keg:
@@ -251,6 +396,102 @@ def flow_update(keg_id):
         return jsonify(response), 200
     else:
         return jsonify({'success': False, 'error': 'Keg not found or not tapped'}), 404
+
+@app.route("/delete/<int:keg_id>", methods=["POST"])
+def delete_keg(keg_id):
+    session = SessionLocal()
+    keg = session.query(Keg).filter(Keg.id == keg_id).first()
+    if keg:
+        session.delete(keg)
+        session.commit()
+    session.close()
+    return redirect(url_for("manage"))
+
+@app.route("/finish/<int:keg_id>", methods=["POST"])
+def finish_keg(keg_id):
+    session = SessionLocal()
+    keg = session.query(Keg).filter(Keg.id == keg_id).first()
+    if keg and keg.status == KegStatus.TAPPED:
+        keg.status = KegStatus.OFF_TAP
+        keg.date_finished = datetime.utcnow()
+        session.commit()
+    session.close()
+    return redirect(url_for("manage"))
+
+@app.route("/edit/<int:keg_id>", methods=["GET", "POST"])
+def edit_keg(keg_id):
+    session = SessionLocal()
+    keg = session.query(Keg).filter(Keg.id == keg_id).first()
+    if not keg:
+        session.close()
+        return redirect(url_for("manage"))
+    if request.method == "POST":
+        keg.name = request.form["name"]
+        keg.style = request.form["style"]
+        keg.brewer = request.form["brewer"]
+        keg.abv = float(request.form["abv"])
+        keg.volume_remaining = float(request.form["volume_remaining"])
+        keg.original_volume = float(request.form["original_volume"])
+        session.commit()
+        session.close()
+        return redirect(url_for("manage"))
+    session.close()
+    return render_template_string(edit_keg_template, keg=keg)
+
+@app.route("/download_db")
+def download_db():
+    db_path = os.path.abspath("kegs.db")
+    return send_file(db_path, as_attachment=True)
+
+@app.route("/export_csv")
+def export_csv():
+    session = SessionLocal()
+    kegs = session.query(Keg).all()
+    session.close()
+    def generate():
+        data = [
+            ["id", "name", "style", "brewer", "abv", "volume_remaining", "original_volume", "date_created", "date_last_tapped", "date_finished", "status"]
+        ]
+        for k in kegs:
+            data.append([
+                k.id, k.name, k.style, k.brewer, k.abv, k.volume_remaining, k.original_volume, k.date_created, k.date_last_tapped, k.date_finished, k.status.value
+            ])
+        output = []
+        writer = csv.writer(output)
+        for row in data:
+            writer.writerow(row)
+        return '\n'.join([','.join(map(str, row)) for row in data])
+    return Response(generate(), mimetype='text/csv', headers={"Content-Disposition": "attachment;filename=kegs.csv"})
+
+@app.route("/export_pour_history")
+def export_pour_history():
+    session = SessionLocal()
+    events = session.query(PourEvent).order_by(PourEvent.timestamp.desc()).limit(1000).all()
+    kegs = session.query(Keg).all()
+    keg_map = {k.id: (k.name, k.brewer) for k in kegs}
+    session.close()
+    def generate():
+        data = [["timestamp", "keg_id", "keg_name", "brewer", "volume_dispensed"]]
+        for e in events:
+            name, brewer = keg_map.get(e.keg_id, ("Unknown", ""))
+            data.append([e.timestamp, e.keg_id, name, brewer, e.volume_dispensed])
+        return '\n'.join([','.join(map(str, row)) for row in data])
+    return Response(generate(), mimetype='text/csv', headers={"Content-Disposition": "attachment;filename=pour_history.csv"})
+
+@app.route("/download_full_pour_history")
+def download_full_pour_history():
+    session = SessionLocal()
+    events = session.query(PourEvent).order_by(PourEvent.timestamp.desc()).all()
+    kegs = session.query(Keg).all()
+    keg_map = {k.id: (k.name, k.brewer) for k in kegs}
+    session.close()
+    def generate():
+        data = [["timestamp", "keg_id", "keg_name", "brewer", "volume_dispensed"]]
+        for e in events:
+            name, brewer = keg_map.get(e.keg_id, ("Unknown", ""))
+            data.append([e.timestamp, e.keg_id, name, brewer, e.volume_dispensed])
+        return '\n'.join([','.join(map(str, row)) for row in data])
+    return Response(generate(), mimetype='text/csv', headers={"Content-Disposition": "attachment;filename=full_pour_history.csv"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True) 
