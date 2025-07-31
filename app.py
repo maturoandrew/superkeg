@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from flask import Flask, render_template_string, request, redirect, url_for, jsonify
 from keg_app import SessionLocal, input_new_keg, tap_new_keg, tap_previous_keg, take_keg_off_tap, Keg, KegStatus, subtract_volume
 import random
@@ -93,36 +94,36 @@ display_template = '''
 
 def get_cheers_message():
     cheers_messages = [
-        "Cheers! 🍻",
-        "Prost! 🍺",
-        "Salud! 🥂",
-        "Skål! 🍷",
-        "Cheers mate! 🍻",
-        "Here's to you! 🥃",
-        "Bottoms up! 🍺",
-        "Cheers to that! 🍻",
-        "Here's looking at you! 🥂",
-        "Sláinte! 🍺"
+        "Cheers!",
+        "Prost!",
+        "Salud!",
+        "Skal!",
+        "Cheers mate!",
+        "Here's to you!",
+        "Bottoms up!",
+        "Cheers to that!",
+        "Here's looking at you!",
+        "Slainte!"
     ]
     return random.choice(cheers_messages)
 
 def get_pour_comment(volume_oz):
     if volume_oz < 5:
         sample_messages = [
-            "Oh, just a sample? 😏",
-            "Tasting flight size! 🍷",
-            "Just a little sip? 😄",
-            "Keeping it light! 🍺",
-            "Sample size pour! 🥃"
+            "Oh, just a sample?",
+            "Tasting flight size!",
+            "Just a little sip?",
+            "Keeping it light!",
+            "Sample size pour!"
         ]
         return random.choice(sample_messages)
     elif volume_oz > 12:
         generous_messages = [
-            "Now that's a generous pour! 🍻",
-            "Going big! 🍺",
-            "That's a proper pint! 🥃",
-            "Living large! 🍻",
-            "Now we're talking! 🍺"
+            "Now that's a generous pour!",
+            "Going big!",
+            "That's a proper pint!",
+            "Living large!",
+            "Now we're talking!"
         ]
         return random.choice(generous_messages)
     else:
