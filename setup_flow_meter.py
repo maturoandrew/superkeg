@@ -123,18 +123,18 @@ def show_hardware_setup():
     print("\n=== Hardware Setup Instructions ===")
     print("""
 Common Flow Meters:
-  • YF-S201: ~450 pulses/L, 1-30 L/min flow rate
-  • YF-S401: ~5880 pulses/L, 0.3-6 L/min flow rate
-  • YF-B1: ~1800 pulses/L, 1-25 L/min flow rate
+  - YF-S201: ~450 pulses/L, 1-30 L/min flow rate
+  - YF-S401: ~5880 pulses/L, 0.3-6 L/min flow rate
+  - YF-B1: ~1800 pulses/L, 1-25 L/min flow rate
 
 Wiring (typical 3-wire flow meter):
-  • Red wire (VCC)    → Raspberry Pi 5V (pin 2 or 4)
-  • Black wire (GND)  → Raspberry Pi GND (pin 6, 9, 14, 20, 25, 30, 34, or 39)
-  • Yellow wire (SIG) → Raspberry Pi GPIO pin (default: GPIO 18, pin 12)
+  - Red wire (VCC)    -> Raspberry Pi 5V (pin 2 or 4)
+  - Black wire (GND)  -> Raspberry Pi GND (pin 6, 9, 14, 20, 25, 30, 34, or 39)
+  - Yellow wire (SIG) -> Raspberry Pi GPIO pin (default: GPIO 18, pin 12)
 
 Optional Pull-up Resistor:
-  • 10kΩ resistor between Signal (Yellow) and VCC (Red)
-  • Some flow meters have built-in pull-ups
+  - 10k ohm resistor between Signal (Yellow) and VCC (Red)
+  - Some flow meters have built-in pull-ups
 
 Raspberry Pi 2 GPIO Pinout (relevant pins):
   Pin 2:  5V

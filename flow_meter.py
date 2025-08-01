@@ -12,7 +12,7 @@ Hardware Setup:
 - Flow meter VCC -> 5V (or 3.3V depending on sensor)
 - Flow meter GND -> GND
 - Flow meter Signal -> GPIO pin (default GPIO 4)
-- Pull-up resistor may be needed (10kΩ between signal and VCC)
+- Pull-up resistor may be needed (10k ohm between signal and VCC)
 """
 
 import time
