@@ -54,6 +54,7 @@ template = '''
         .keg-card { flex: 1 1 0; max-width: 25%; min-width: 220px; margin: 0 1rem; }
         .low-volume { border: 3px solid #dc3545 !important; box-shadow: 0 0 10px #dc3545; }
         .tap-label { font-weight: bold; font-size: 1.2rem; color: #0d6efd; text-align: center; margin-bottom: 0.5rem; }
+        .notification { position: fixed; top: 20px; right: 20px; z-index: 9999; }
         @media (max-width: 900px) {
             .keg-row { flex-wrap: wrap; }
             .keg-card { max-width: 100%; margin: 1rem 0; }
@@ -73,7 +74,7 @@ template = '''
                 <p class="card-text"><strong>Brewer:</strong> {{ keg.brewer }}</p>
                 <p class="card-text"><strong>Style:</strong> {{ keg.style }}</p>
                 <p class="card-text"><strong>ABV:</strong> {{ keg.abv }}%</p>
-                <p class="card-text"><strong>Volume Remaining:</strong> {{ keg.volume_remaining }} L</p>
+                <p class="card-text"><strong>Volume Remaining:</strong> {{ "%.2f"|format(keg.volume_remaining) }} L</p>
                 <p class="card-text"><strong>Last Tapped:</strong> {{ keg.date_last_tapped or 'N/A' }}</p>
             </div>
         </div>
@@ -81,6 +82,46 @@ template = '''
         <p>No kegs are currently tapped.</p>
     {% endfor %}
     </div>
+    
+    <!-- Notification container -->
+    <div id="notification-container"></div>
+    
+    <script>
+    // Function to show pour notification
+    function showPourNotification(kegName, volumeLiters, volumeOz) {
+        const container = document.getElementById('notification-container');
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-success notification';
+        notification.innerHTML = `
+            <strong>🍺 Beer Poured!</strong><br>
+            <strong>${kegName}</strong><br>
+            ${volumeLiters.toFixed(2)}L (${volumeOz.toFixed(1)}oz)
+        `;
+        
+        container.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 5000);
+    }
+    
+    // Check for new pours every 2 seconds
+    setInterval(() => {
+        fetch('/api/recent-pours')
+            .then(response => response.json())
+            .then(data => {
+                if (data.pours && data.pours.length > 0) {
+                    data.pours.forEach(pour => {
+                        showPourNotification(pour.keg_name, pour.volume_liters, pour.volume_oz);
+                    });
+                }
+            })
+            .catch(error => console.log('No recent pours'));
+    }, 2000);
+    </script>
 </body>
 </html>
 '''
@@ -134,7 +175,7 @@ management_template = '''
             <td>{{ keg.style }}</td>
             <td>{{ keg.brewer }}</td>
             <td>{{ keg.abv }}</td>
-            <td>{{ keg.volume_remaining }}</td>
+            <td>{{ "%.2f"|format(keg.volume_remaining) }}</td>
             <td>{{ keg.tap_position or '' }}</td>
             <td>{{ keg.status.value }}</td>
             <td>{{ keg.date_last_tapped or '' }}</td>
@@ -197,7 +238,7 @@ display_template = '''
                 <p class="card-text"><strong>Brewer:</strong> {{ keg.brewer }}</p>
                 <p class="card-text"><strong>Style:</strong> {{ keg.style }}</p>
                 <p class="card-text"><strong>ABV:</strong> {{ keg.abv }}%</p>
-                <p class="card-text"><strong>Volume Remaining:</strong> {{ keg.volume_remaining }} L</p>
+                <p class="card-text"><strong>Volume Remaining:</strong> {{ "%.2f"|format(keg.volume_remaining) }} L</p>
                 <p class="card-text"><strong>Last Tapped:</strong> {{ keg.date_last_tapped or 'N/A' }}</p>
             </div>
         </div>
@@ -417,6 +458,41 @@ def flow_update(keg_id):
     except Exception as e:
         session.close()
         return jsonify({'success': False, 'error': 'Database error: %s' % str(e)}), 500
+
+@app.route('/api/recent-pours')
+def recent_pours():
+    """Get recent pour events for notifications."""
+    try:
+        session = SessionLocal()
+        # Get pour events from the last 10 seconds
+        from datetime import datetime, timedelta
+        cutoff_time = datetime.utcnow() - timedelta(seconds=10)
+        
+        recent_events = session.query(PourEvent).filter(
+            PourEvent.timestamp >= cutoff_time
+        ).order_by(PourEvent.timestamp.desc()).all()
+        
+        # Get keg names for the events
+        keg_ids = [event.keg_id for event in recent_events]
+        kegs = session.query(Keg).filter(Keg.id.in_(keg_ids)).all()
+        keg_map = {keg.id: keg.name for keg in kegs}
+        
+        pours = []
+        for event in recent_events:
+            keg_name = keg_map.get(event.keg_id, 'Unknown Keg')
+            volume_oz = event.volume_dispensed * 33.814  # Convert liters to ounces
+            pours.append({
+                'keg_name': keg_name,
+                'volume_liters': event.volume_dispensed,
+                'volume_oz': volume_oz,
+                'timestamp': event.timestamp.isoformat()
+            })
+        
+        session.close()
+        return jsonify({'pours': pours})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route("/delete/<int:keg_id>", methods=["POST"])
 def delete_keg(keg_id):
