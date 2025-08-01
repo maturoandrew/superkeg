@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Flow Meter Tracking Module for Raspberry Pi
 Tracks flow meter pulses and calculates volume dispensed for keg monitoring system.
@@ -19,8 +19,14 @@ import time
 import threading
 import json
 from datetime import datetime
-from typing import Callable, Optional, Dict, Any
 import logging
+
+# Python 2/3 compatibility
+try:
+    from typing import Callable, Optional, Dict, Any
+except ImportError:
+    # Python 2 doesn't have typing module
+    pass
 
 try:
     import RPi.GPIO as GPIO
@@ -48,7 +54,7 @@ class FlowMeter:
         is_monitoring (bool): Whether monitoring is active
     """
     
-    def __init__(self, gpio_pin: int = 4, pulses_per_liter: float = 450.0):
+    def __init__(self, gpio_pin=4, pulses_per_liter=450.0):
         """
         Initialize flow meter.
         
