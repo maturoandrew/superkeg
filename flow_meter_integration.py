@@ -95,25 +95,51 @@ class MultiTapFlowSystem(object):
         """Track active pour progress for real-time display."""
         from datetime import datetime
         
-        if keg_id not in self.active_pours:
-            self.active_pours[keg_id] = {
-                'start_time': datetime.utcnow(),
-                'total_volume': 0,
-                'last_update': datetime.utcnow()
-            }
-            logger.info("Pour started - Keg %d" % keg_id)
+        # Get keg name
+        try:
+            session = SessionLocal()
+            keg = session.query(Keg).filter(Keg.id == keg_id).first()
+            keg_name = keg.name if keg else 'Unknown Keg'
+            session.close()
+        except Exception as e:
+            keg_name = 'Unknown Keg'
+            logger.error("Error getting keg name: %s" % str(e))
         
-        self.active_pours[keg_id]['total_volume'] += volume_liters
-        self.active_pours[keg_id]['last_update'] = datetime.utcnow()
-        
-        logger.info("Active pour - Keg %d: %.1fml total" % (keg_id, self.active_pours[keg_id]['total_volume'] * 1000))
+        # Use volume tracker if available
+        try:
+            from volume_tracker import volume_tracker
+            if keg_id not in self.active_pours:
+                volume_tracker.start_pour(keg_id, keg_name)
+                logger.info("Pour started - Keg %d (%s)" % (keg_id, keg_name))
+            
+            volume_tracker.update_pour_volume(keg_id, volume_liters)
+        except ImportError:
+            # Fallback to local tracking
+            if keg_id not in self.active_pours:
+                self.active_pours[keg_id] = {
+                    'start_time': datetime.utcnow(),
+                    'total_volume': 0,
+                    'last_update': datetime.utcnow()
+                }
+                logger.info("Pour started - Keg %d" % keg_id)
+            
+            self.active_pours[keg_id]['total_volume'] += volume_liters
+            self.active_pours[keg_id]['last_update'] = datetime.utcnow()
+            
+            logger.info("Active pour - Keg %d: %.1fml total" % (keg_id, self.active_pours[keg_id]['total_volume'] * 1000))
     
     def _finish_active_pour(self, keg_id, volume_liters=None):
         """Mark active pour as finished."""
-        if keg_id in self.active_pours:
-            total_volume = self.active_pours[keg_id]['total_volume']
-            logger.info("Finished pour - Keg %d: %.1fml total" % (keg_id, total_volume * 1000))
-            del self.active_pours[keg_id]
+        # Use volume tracker if available
+        try:
+            from volume_tracker import volume_tracker
+            volume_tracker.finish_pour(keg_id)
+        except ImportError:
+            # Fallback to local tracking
+            if keg_id in self.active_pours:
+                total_volume = self.active_pours[keg_id]['total_volume']
+                logger.info("Finished pour - Keg %d: %.1fml total" % (keg_id, total_volume * 1000))
+                del self.active_pours[keg_id]
     
     def get_active_pours(self):
         """Get current active pours for API."""

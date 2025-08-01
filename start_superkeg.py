@@ -125,6 +125,15 @@ class SuperkegManager(object):
             import app
             app.flow_system = self.flow_system
             
+            # Start volume tracker for real-time updates
+            try:
+                from volume_tracker import volume_tracker
+                volume_tracker.start()
+                app.volume_tracker = volume_tracker
+                logger.info("Volume tracker started")
+            except ImportError:
+                logger.warning("Volume tracker not available")
+            
             # Start monitoring in a separate thread
             flow_thread = threading.Thread(
                 target=self._run_flow_monitoring

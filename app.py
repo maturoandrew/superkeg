@@ -11,6 +11,9 @@ app = Flask(__name__)
 # Global flow system instance for API access
 flow_system = None
 
+# Global volume tracker for real-time updates
+volume_tracker = None
+
 # Add dark mode CSS and toggle to all templates
 DARK_MODE_HEAD = '''
 <style id="dark-mode-style">
@@ -568,6 +571,10 @@ def flow_update(keg_id):
 def active_pours():
     """Get active pour progress for real-time display."""
     try:
+        # Try to get active pours from volume tracker first
+        if hasattr(app, 'latest_volume_data') and app.latest_volume_data:
+            return jsonify(app.latest_volume_data)
+        
         # Try to get active pours from flow system if available
         if flow_system and hasattr(flow_system, 'get_active_pours'):
             active_pours, completed_pours = flow_system.get_active_pours()
@@ -630,6 +637,22 @@ def active_pours():
             'active_pours': active_pours,
             'completed_pours': completed_pours
         })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/volume-update', methods=['POST'])
+def volume_update():
+    """Receive volume updates from the volume tracker."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data received'}), 400
+        
+        # Store the latest volume data
+        app.latest_volume_data = data
+        
+        return jsonify({'success': True})
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
