@@ -234,10 +234,10 @@ def main():
     # Configuration for 4-tap system
     # Adjust GPIO pins and calibration values for your setup
     tap_configs = [
-        {"tap_number": 1, "gpio_pin": 18, "pulses_per_liter": 450.0},  # YF-S201 on GPIO 18
-        {"tap_number": 2, "gpio_pin": 19, "pulses_per_liter": 450.0},  # YF-S201 on GPIO 19
-        {"tap_number": 3, "gpio_pin": 20, "pulses_per_liter": 450.0},  # YF-S201 on GPIO 20
-        {"tap_number": 4, "gpio_pin": 21, "pulses_per_liter": 450.0},  # YF-S201 on GPIO 21
+        {"tap_number": 1, "gpio_pin": 4, "pulses_per_liter": 450.0},   # YF-S201 on GPIO 4
+        {"tap_number": 2, "gpio_pin": 17, "pulses_per_liter": 450.0}, # YF-S201 on GPIO 17
+        {"tap_number": 3, "gpio_pin": 27, "pulses_per_liter": 450.0}, # YF-S201 on GPIO 27
+        {"tap_number": 4, "gpio_pin": 22, "pulses_per_liter": 450.0}, # YF-S201 on GPIO 22
     ]
     
     # Create and start the system

@@ -48,16 +48,16 @@ class FlowMeter:
         is_monitoring (bool): Whether monitoring is active
     """
     
-    def __init__(self, gpio_pin: int = 18, pulses_per_liter: float = 450.0):
+    def __init__(self, gpio_pin: int = 4, pulses_per_liter: float = 450.0):
         """
         Initialize flow meter.
         
-        Args:
-            gpio_pin: GPIO pin number for flow meter signal
-            pulses_per_liter: Calibration factor (pulses per liter)
-                             Common values:
-                             - YF-S201: ~450 pulses/L
-                             - YF-S401: ~5880 pulses/L
+                 Args:
+             gpio_pin: GPIO pin number for flow meter signal (default: 4)
+             pulses_per_liter: Calibration factor (pulses per liter)
+                              Common values:
+                              - YF-S201: ~450 pulses/L
+                              - YF-S401: ~5880 pulses/L
         """
         self.gpio_pin = gpio_pin
         self.pulses_per_liter = pulses_per_liter
@@ -379,7 +379,7 @@ def test_flow_meter():
     print("Testing Flow Meter...")
     
     # Create flow meter instance
-    flow_meter = FlowMeter(gpio_pin=18, pulses_per_liter=450.0)
+    flow_meter = FlowMeter(gpio_pin=4, pulses_per_liter=450.0)
     
     # Add callbacks for testing
     def on_pulse():
