@@ -1,2 +1,4 @@
 SQLAlchemy
-Flask 
+Flask
+RPi.GPIO
+requests 
