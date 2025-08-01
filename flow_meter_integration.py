@@ -108,7 +108,7 @@ class MultiTapFlowSystem(object):
         
         logger.info("Active pour - Keg %d: %.1fml total" % (keg_id, self.active_pours[keg_id]['total_volume'] * 1000))
     
-    def _finish_active_pour(self, keg_id):
+    def _finish_active_pour(self, keg_id, volume_liters=None):
         """Mark active pour as finished."""
         if keg_id in self.active_pours:
             total_volume = self.active_pours[keg_id]['total_volume']
