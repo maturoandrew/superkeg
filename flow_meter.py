@@ -308,6 +308,13 @@ class KegFlowTracker(object):
         
         # Reset pour timeout
         self.last_flow_time = current_time
+        
+        # Track active pour progress
+        volume_since_last = total_volume_liters - self.last_logged_volume
+        if volume_since_last > 0:
+            # Call active pour callback if available
+            if hasattr(self, 'active_pour_callback') and self.active_pour_callback:
+                self.active_pour_callback(self.keg_id, volume_since_last)
     
     def _on_flow_rate_change(self, flow_rate_l_per_min):
         """Called when flow rate changes."""

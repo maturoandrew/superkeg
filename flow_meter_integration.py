@@ -46,6 +46,7 @@ class MultiTapFlowSystem(object):
         self.flask_base_url = flask_base_url
         self.flow_trackers = {}
         self.running = False
+        self.active_pours = {}  # Track active pours by keg_id
         
         # Setup signal handlers for clean shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -89,6 +90,71 @@ class MultiTapFlowSystem(object):
             logger.info("Logged pour event: keg %d, %.1fml" % (keg_id, volume_liters*1000))
         except Exception as e:
             logger.error("Database error logging pour for keg %d: %s" % (keg_id, str(e)))
+    
+    def _track_active_pour(self, keg_id, volume_liters):
+        """Track active pour progress for real-time display."""
+        from datetime import datetime
+        
+        if keg_id not in self.active_pours:
+            self.active_pours[keg_id] = {
+                'start_time': datetime.utcnow(),
+                'total_volume': 0,
+                'last_update': datetime.utcnow()
+            }
+        
+        self.active_pours[keg_id]['total_volume'] += volume_liters
+        self.active_pours[keg_id]['last_update'] = datetime.utcnow()
+        
+        logger.info("Active pour - Keg %d: %.1fml total" % (keg_id, self.active_pours[keg_id]['total_volume'] * 1000))
+    
+    def _finish_active_pour(self, keg_id):
+        """Mark active pour as finished."""
+        if keg_id in self.active_pours:
+            total_volume = self.active_pours[keg_id]['total_volume']
+            logger.info("Finished pour - Keg %d: %.1fml total" % (keg_id, total_volume * 1000))
+            del self.active_pours[keg_id]
+    
+    def get_active_pours(self):
+        """Get current active pours for API."""
+        from datetime import datetime
+        
+        active_pours = []
+        completed_pours = []
+        
+        # Clean up old active pours (older than 10 seconds)
+        current_time = datetime.utcnow()
+        kegs_to_remove = []
+        
+        for keg_id, pour_data in self.active_pours.items():
+            time_since_update = (current_time - pour_data['last_update']).total_seconds()
+            if time_since_update > 10:  # Mark as completed if no updates for 10 seconds
+                completed_pours.append({
+                    'keg_id': keg_id,
+                    'final_volume': pour_data['total_volume']
+                })
+                kegs_to_remove.append(keg_id)
+            else:
+                # Get keg name
+                try:
+                    session = SessionLocal()
+                    keg = session.query(Keg).filter(Keg.id == keg_id).first()
+                    keg_name = keg.name if keg else 'Unknown Keg'
+                    session.close()
+                    
+                    active_pours.append({
+                        'keg_id': keg_id,
+                        'keg_name': keg_name,
+                        'current_volume': pour_data['total_volume'],
+                        'total_volume': min(pour_data['total_volume'] * 2, 0.5)  # Estimate total
+                    })
+                except Exception as e:
+                    logger.error("Error getting keg name for %d: %s" % (keg_id, str(e)))
+        
+        # Remove completed pours
+        for keg_id in kegs_to_remove:
+            del self.active_pours[keg_id]
+        
+        return active_pours, completed_pours
     
     def _update_keg_volume_api(self, keg_id, volume_liters):
         """Update keg volume via Flask API."""
@@ -151,6 +217,7 @@ class MultiTapFlowSystem(object):
             # Set up callbacks - prefer API, fallback to direct DB
             tracker.update_keg_callback = self._update_keg_volume_api
             tracker.log_pour_callback = lambda kid, vol: None  # API handles both update and logging
+            tracker.active_pour_callback = self._track_active_pour  # Track active pours
             
             # Store tracker
             self.flow_trackers[tap_number] = tracker

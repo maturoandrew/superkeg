@@ -568,8 +568,8 @@ def active_pours():
         session = SessionLocal()
         from datetime import datetime, timedelta
         
-        # Get pour events from the last 30 seconds (active pours)
-        cutoff_time = datetime.utcnow() - timedelta(seconds=30)
+        # Get pour events from the last 10 seconds (active pours)
+        cutoff_time = datetime.utcnow() - timedelta(seconds=10)
         
         recent_events = session.query(PourEvent).filter(
             PourEvent.timestamp >= cutoff_time
@@ -585,32 +585,31 @@ def active_pours():
         # Get keg info
         keg_ids = list(keg_pours.keys())
         kegs = session.query(Keg).filter(Keg.id.in_(keg_ids)).all()
-        keg_map = {keg.id: {'name': keg.name, 'total_volume': keg.volume_remaining + sum([e.volume_dispensed for e in keg_pours.get(keg.id, [])])} for keg in kegs}
+        keg_map = {keg.id: keg.name for keg in kegs}
         
         active_pours = []
         completed_pours = []
         
         for keg_id, events in keg_pours.items():
             if keg_id in keg_map:
-                keg_info = keg_map[keg_id]
                 total_poured = sum([e.volume_dispensed for e in events])
-                current_volume = keg_info['total_volume'] - total_poured
+                keg_name = keg_map[keg_id]
                 
-                # Check if pour is still active (last event within 5 seconds)
+                # Check if pour is still active (last event within 3 seconds)
                 last_event_time = max([e.timestamp for e in events])
-                is_active = (datetime.utcnow() - last_event_time).total_seconds() < 5
+                is_active = (datetime.utcnow() - last_event_time).total_seconds() < 3
                 
                 if is_active and total_poured > 0:
                     active_pours.append({
                         'keg_id': keg_id,
-                        'keg_name': keg_info['name'],
+                        'keg_name': keg_name,
                         'current_volume': total_poured,
                         'total_volume': min(total_poured * 2, 0.5)  # Estimate total pour size
                     })
                 elif not is_active and total_poured > 0:
                     completed_pours.append({
                         'keg_id': keg_id,
-                        'keg_name': keg_info['name'],
+                        'keg_name': keg_name,
                         'final_volume': total_poured
                     })
         
