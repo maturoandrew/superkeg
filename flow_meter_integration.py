@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Flow Meter Integration Example
 Shows how to integrate the flow meter with the existing keg tracking system.
@@ -15,10 +15,9 @@ import time
 import requests
 import signal
 import sys
-from typing import Dict, List
+import logging
 from flow_meter import FlowMeter, KegFlowTracker
 from keg_app import SessionLocal, subtract_volume, log_pour_event, Keg, KegStatus
-import logging
 
 # Configure logging
 logging.basicConfig(
@@ -28,13 +27,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class MultiTapFlowSystem:
+class MultiTapFlowSystem(object):
     """
     Manages multiple flow meters for a multi-tap keg system.
     Integrates with the existing Flask web application and database.
     """
     
-    def __init__(self, tap_configs: List[Dict], flask_base_url: str = "http://localhost:5000"):
+    def __init__(self, tap_configs, flask_base_url="http://localhost:5000"):
         """
         Initialize multi-tap flow system.
         
@@ -45,7 +44,7 @@ class MultiTapFlowSystem:
         """
         self.tap_configs = tap_configs
         self.flask_base_url = flask_base_url
-        self.flow_trackers: Dict[int, KegFlowTracker] = {}
+        self.flow_trackers = {}
         self.running = False
         
         # Setup signal handlers for clean shutdown
@@ -54,22 +53,22 @@ class MultiTapFlowSystem:
     
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals gracefully."""
-        logger.info(f"Received signal {signum}, shutting down...")
+        logger.info("Received signal %d, shutting down..." % signum)
         self.stop_all()
         sys.exit(0)
     
-    def _update_keg_volume_db(self, keg_id: int, volume_liters: float):
+    def _update_keg_volume_db(self, keg_id, volume_liters):
         """Update keg volume in database directly."""
         try:
             session = SessionLocal()
             keg = subtract_volume(session, keg_id, volume_liters)
             if keg:
-                logger.info(f"Updated keg {keg_id}: -{volume_liters*1000:.1f}ml, remaining: {keg.volume_remaining:.2f}L")
+                logger.info("Updated keg %d: -%.1fml, remaining: %.2fL" % (keg_id, volume_liters*1000, keg.volume_remaining))
             else:
-                logger.warning(f"Failed to update keg {keg_id} volume")
+                logger.warning("Failed to update keg %d volume" % keg_id)
             session.close()
         except Exception as e:
-            logger.error(f"Database error updating keg {keg_id}: {e}")
+            logger.error("Database error updating keg %d: %s" % (keg_id, str(e)))
     
     def _log_pour_event_db(self, keg_id: int, volume_liters: float):
         """Log pour event to database directly."""
