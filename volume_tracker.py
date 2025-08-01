@@ -55,7 +55,7 @@ class VolumeTracker(object):
         for keg_id, pour_data in self.active_pours.items():
             time_since_update = (current_time - pour_data['last_update']).total_seconds()
             
-            if time_since_update > 5:  # Mark as completed if no updates for 5 seconds
+            if time_since_update > 3:  # Mark as completed if no updates for 3 seconds
                 completed_pours.append({
                     'keg_id': keg_id,
                     'keg_name': pour_data['keg_name'],
@@ -92,6 +92,8 @@ class VolumeTracker(object):
                         'timestamp': datetime.utcnow().isoformat()
                     }
                     
+                    logger.debug("Sending to Flask - Active: %d, Completed: %d" % (len(active_pours), len(completed_pours)))
+                    
                     response = requests.post(url, json=data, timeout=1)
                     if response.status_code != 200:
                         logger.warning("Failed to send volume update to Flask: %d" % response.status_code)
@@ -99,7 +101,7 @@ class VolumeTracker(object):
             except Exception as e:
                 logger.error("Error sending volume update: %s" % str(e))
             
-            time.sleep(0.25)  # Update every 250ms
+            time.sleep(0.1)  # Update every 100ms for faster response
     
     def start(self):
         """Start the volume tracker."""

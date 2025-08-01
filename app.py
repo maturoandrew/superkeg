@@ -201,12 +201,12 @@ template = '''
             popup.querySelector('.pour-status').textContent = 'Pour Complete!';
             popup.querySelector('.pour-content').classList.add('complete');
             
-            // Remove popup after 3 seconds
+            // Remove popup after 2 seconds
             setTimeout(() => {
                 if (popup.parentNode) {
                     popup.parentNode.removeChild(popup);
                 }
-            }, 3000);
+            }, 2000);
         }
     }
     
@@ -576,7 +576,11 @@ def active_pours():
     try:
         # Try to get active pours from volume tracker first
         if hasattr(app, 'latest_volume_data') and app.latest_volume_data:
-            return jsonify(app.latest_volume_data)
+            data = app.latest_volume_data
+            active_count = len(data.get('active_pours', []))
+            completed_count = len(data.get('completed_pours', []))
+            print("API returning - Active: %d, Completed: %d" % (active_count, completed_count))
+            return jsonify(data)
         
         # Try to get active pours from flow system if available
         if flow_system and hasattr(flow_system, 'get_active_pours'):
@@ -654,6 +658,11 @@ def volume_update():
         
         # Store the latest volume data
         app.latest_volume_data = data
+        
+        # Debug logging
+        active_count = len(data.get('active_pours', []))
+        completed_count = len(data.get('completed_pours', []))
+        print("Volume update received - Active: %d, Completed: %d" % (active_count, completed_count))
         
         return jsonify({'success': True})
         
