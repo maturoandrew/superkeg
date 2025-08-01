@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Superkeg Combined Startup Script
 Starts both the Flask web application and flow meter monitoring system.
@@ -11,10 +11,11 @@ import signal
 import logging
 import subprocess
 import threading
-from pathlib import Path
+from datetime import datetime
 
 # Add current directory to path for imports
-sys.path.append(str(Path(__file__).parent))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
 
 # Configure logging
 logging.basicConfig(
@@ -27,7 +28,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class SuperkegManager:
+class SuperkegManager(object):
     """Manages both Flask app and flow meter monitoring."""
     
     def __init__(self):
@@ -41,7 +42,7 @@ class SuperkegManager:
     
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals gracefully."""
-        logger.info(f"Received signal {signum}, shutting down...")
+        logger.info("Received signal %d, shutting down..." % signum)
         self.stop_all()
         sys.exit(0)
     
@@ -61,9 +62,9 @@ class SuperkegManager:
             
             # Monitor Flask output in a separate thread
             flask_monitor = threading.Thread(
-                target=self._monitor_flask_output,
-                daemon=True
+                target=self._monitor_flask_output
             )
+            flask_monitor.daemon = True
             flask_monitor.start()
             
             # Give Flask time to start
@@ -77,7 +78,7 @@ class SuperkegManager:
                 return False
                 
         except Exception as e:
-            logger.error(f"Error starting Flask app: {e}")
+            logger.error("Error starting Flask app: %s" % str(e))
             return False
     
     def _monitor_flask_output(self):
@@ -88,11 +89,11 @@ class SuperkegManager:
         try:
             for line in iter(self.flask_process.stdout.readline, ''):
                 if line.strip():
-                    logger.info(f"Flask: {line.strip()}")
+                    logger.info("Flask: %s" % line.strip())
                 if not self.running:
                     break
         except Exception as e:
-            logger.error(f"Error monitoring Flask output: {e}")
+            logger.error("Error monitoring Flask output: %s" % str(e))
     
     def start_flow_monitoring(self):
         """Start flow meter monitoring."""
@@ -122,16 +123,16 @@ class SuperkegManager:
             
             # Start monitoring in a separate thread
             flow_thread = threading.Thread(
-                target=self._run_flow_monitoring,
-                daemon=True
+                target=self._run_flow_monitoring
             )
+            flow_thread.daemon = True
             flow_thread.start()
             
             logger.info("✓ Flow meter monitoring started")
             return True
             
         except Exception as e:
-            logger.error(f"Error starting flow monitoring: {e}")
+            logger.error("Error starting flow monitoring: %s" % str(e))
             return False
     
     def _get_tap_config(self):
@@ -154,11 +155,11 @@ class SuperkegManager:
                         "gpio_pin": gpio_pins[keg.tap_position],
                         "pulses_per_liter": 450.0
                     })
-                    logger.info(f"Found tapped keg: {keg.name} at tap {keg.tap_position}")
+                    logger.info("Found tapped keg: %s at tap %d" % (keg.name, keg.tap_position))
             
             return tap_configs
         except Exception as e:
-            logger.error(f"Error getting tap configuration: {e}")
+            logger.error("Error getting tap configuration: %s" % str(e))
             return []
     
     def _run_flow_monitoring(self):
@@ -173,16 +174,16 @@ class SuperkegManager:
                 if hasattr(self, 'flow_system'):
                     status = self.flow_system.get_system_status()
                     if status['active_taps'] > 0:
-                        logger.info(f"Flow monitoring: {status['active_taps']} active taps")
+                        logger.info("Flow monitoring: %d active taps" % status['active_taps'])
                         
                         for tap_num, tap_status in status['taps'].items():
                             volume_ml = tap_status['total_volume_dispensed_ml']
                             flow_rate = tap_status['current_flow_rate_ml_per_min']
                             if volume_ml > 0 or flow_rate > 0:
-                                logger.info(f"  Tap {tap_num}: {volume_ml:.1f}ml total, {flow_rate:.1f}ml/min")
+                                logger.info("  Tap %d: %.1fml total, %.1fml/min" % (tap_num, volume_ml, flow_rate))
         
         except Exception as e:
-            logger.error(f"Error in flow monitoring: {e}")
+            logger.error("Error in flow monitoring: %s" % str(e))
     
     def check_prerequisites(self):
         """Check if all required files and dependencies are available."""
@@ -196,7 +197,7 @@ class SuperkegManager:
                 missing_files.append(file)
         
         if missing_files:
-            logger.error(f"Missing required files: {missing_files}")
+            logger.error("Missing required files: %s" % missing_files)
             return False
         
         # Check Python modules
@@ -205,7 +206,7 @@ class SuperkegManager:
             import sqlalchemy
             logger.info("✓ Required Python modules available")
         except ImportError as e:
-            logger.error(f"Missing Python module: {e}")
+            logger.error("Missing Python module: %s" % str(e))
             return False
         
         logger.info("✓ All prerequisites met")
@@ -213,7 +214,11 @@ class SuperkegManager:
     
     def wait_for_flask_ready(self, timeout=30):
         """Wait for Flask app to be ready."""
-        import requests
+        try:
+            import requests
+        except ImportError:
+            logger.warning("requests module not available, skipping Flask readiness check")
+            return True
         
         start_time = time.time()
         while time.time() - start_time < timeout:
@@ -276,26 +281,30 @@ class SuperkegManager:
         if self.flask_process and self.flask_process.poll() is None:
             try:
                 self.flask_process.terminate()
-                self.flask_process.wait(timeout=5)
+                self.flask_process.wait()
                 logger.info("✓ Flask app stopped")
-            except subprocess.TimeoutExpired:
-                self.flask_process.kill()
-                logger.info("✓ Flask app force stopped")
             except:
-                pass
+                try:
+                    self.flask_process.kill()
+                    logger.info("✓ Flask app force stopped")
+                except:
+                    pass
         
         logger.info("Superkeg system shutdown complete")
     
     def status(self):
         """Get system status."""
+        flask_running = self.flask_process and self.flask_process.poll() is None
+        flow_monitoring = hasattr(self, 'flow_system') and getattr(self.flow_system, 'running', False)
+        
         status = {
-            'flask_running': self.flask_process and self.flask_process.poll() is None,
-            'flow_monitoring': hasattr(self, 'flow_system') and getattr(self.flow_system, 'running', False)
+            'flask_running': flask_running,
+            'flow_monitoring': flow_monitoring
         }
         
-        logger.info(f"System Status:")
-        logger.info(f"  Flask App: {'Running' if status['flask_running'] else 'Stopped'}")
-        logger.info(f"  Flow Monitoring: {'Running' if status['flow_monitoring'] else 'Stopped'}")
+        logger.info("System Status:")
+        logger.info("  Flask App: %s" % ('Running' if status['flask_running'] else 'Stopped'))
+        logger.info("  Flow Monitoring: %s" % ('Running' if status['flow_monitoring'] else 'Stopped'))
         
         return status
 
@@ -316,7 +325,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Shutdown requested by user")
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        logger.error("Unexpected error: %s" % str(e))
         import traceback
         logger.error(traceback.format_exc())
     finally:

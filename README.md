@@ -80,7 +80,7 @@ Flow Meter Wiring (typical 3-wire):
 
 4. **Start the complete system:**
    ```bash
-   python3 start_superkeg.py
+   python start_superkeg.py
    ```
    This starts both the Flask web app and flow meter monitoring in one command!
 
