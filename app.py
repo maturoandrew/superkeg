@@ -31,13 +31,13 @@ function setTheme(theme) {
 function toggleTheme() {
   const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   setTheme(theme);
-  document.getElementById('theme-toggle').innerText = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+  document.getElementById('theme-toggle').innerText = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
 }
 window.onload = function() {
   let theme = localStorage.getItem('theme') || 'light';
   setTheme(theme);
   if (document.getElementById('theme-toggle')) {
-    document.getElementById('theme-toggle').innerText = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+    document.getElementById('theme-toggle').innerText = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
   }
 }
 </script>
@@ -61,7 +61,7 @@ template = '''
     </style>
 </head>
 <body class="container py-4">
-    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">🌙 Dark Mode</button>
+    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">Dark Mode</button>
     <h1>Currently Tapped Kegs</h1>
     <a href="/manage" class="btn btn-primary mb-4">Keg Management</a>
     <div class="keg-row">
@@ -69,7 +69,7 @@ template = '''
         <div class="card keg-card {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}low-volume{% endif %}">
             <div class="tap-label">Tap {{ loop.index }}</div>
             <div class="card-body">
-                <h2 class="card-title">{{ keg.name }} {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}<span title="Low Volume" style="color:#dc3545;">&#9888;</span>{% endif %}</h2>
+                <h2 class="card-title">{{ keg.name }} {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}<span title="Low Volume" style="color:#dc3545;">!</span>{% endif %}</h2>
                 <p class="card-text"><strong>Brewer:</strong> {{ keg.brewer }}</p>
                 <p class="card-text"><strong>Style:</strong> {{ keg.style }}</p>
                 <p class="card-text"><strong>ABV:</strong> {{ keg.abv }}%</p>
@@ -105,9 +105,13 @@ management_template = '''
     </script>
 </head>
 <body class="container py-4">
-    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">🌙 Dark Mode</button>
+    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">Dark Mode</button>
     <h1>Keg Management</h1>
     <a href="/" class="btn btn-secondary mb-4">Back to Tapped Kegs</a>
+    <a href="/download_db" class="btn btn-outline-primary mb-4 ms-2">Download DB</a>
+    <a href="/export_csv" class="btn btn-outline-success mb-4 ms-2">Export CSV</a>
+    <a href="/export_pour_history" class="btn btn-outline-warning mb-4 ms-2">Export Pour History</a>
+    <a href="/download_full_pour_history" class="btn btn-outline-danger mb-4 ms-2">Download Full Pour History</a>
     
     <h2>Add New Keg</h2>
     <form method="post" action="/add">
@@ -180,7 +184,7 @@ display_template = '''
     </style>
 </head>
 <body class="container py-4">
-    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">🌙 Dark Mode</button>
+    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">Dark Mode</button>
     <h1>Currently Tapped Kegs</h1>
     <a href="/manage" class="btn btn-secondary mb-4">Keg Management</a>
     <div class="keg-row">
@@ -188,7 +192,7 @@ display_template = '''
         <div class="card keg-card {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}low-volume{% endif %}">
             <div class="tap-label">Tap {{ loop.index }}</div>
             <div class="card-body">
-                <h2 class="card-title">{{ keg.name }} {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}<span title="Low Volume" style="color:#dc3545;">&#9888;</span>{% endif %}</h2>
+                <h2 class="card-title">{{ keg.name }} {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}<span title="Low Volume" style="color:#dc3545;">!</span>{% endif %}</h2>
                 <p class="card-text"><strong>Brewer:</strong> {{ keg.brewer }}</p>
                 <p class="card-text"><strong>Style:</strong> {{ keg.style }}</p>
                 <p class="card-text"><strong>ABV:</strong> {{ keg.abv }}%</p>
@@ -212,7 +216,7 @@ edit_keg_template = '''
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="container py-4">
-    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">🌙 Dark Mode</button>
+    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">Dark Mode</button>
     <h1>Edit Keg</h1>
     <a href="/manage" class="btn btn-secondary mb-4">Back to Management</a>
     <form method="post">
@@ -236,7 +240,7 @@ history_template = '''
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="container py-4">
-    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">🌙 Dark Mode</button>
+    <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">Dark Mode</button>
     <h1>Pour History</h1>
     <a href="/manage" class="btn btn-secondary mb-4">Back to Management</a>
     <table class="table table-bordered">
