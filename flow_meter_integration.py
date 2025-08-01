@@ -102,7 +102,7 @@ class MultiTapFlowSystem(object):
             self._update_keg_volume_db(keg_id, volume_liters)
             self._log_pour_event_db(keg_id, volume_liters)
     
-    def get_tapped_kegs(self) -> Dict[int, int]:
+    def get_tapped_kegs(self):
         """Get mapping of tap positions to keg IDs."""
         try:
             session = SessionLocal()
@@ -193,7 +193,7 @@ class MultiTapFlowSystem(object):
         self.running = False
         logger.info("All flow meters stopped")
     
-    def get_system_status(self) -> Dict:
+    def get_system_status(self):
         """Get status of all taps and flow meters."""
         status = {
             'running': self.running,
