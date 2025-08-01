@@ -359,7 +359,7 @@ def pour_history():
     session = SessionLocal()
     events = session.query(PourEvent).order_by(PourEvent.timestamp.desc()).limit(100).all()
     kegs = session.query(Keg).all()
-    keg_map = {k.id: f"{k.name} ({k.brewer})" for k in kegs}
+    keg_map = {k.id: k.name + " (" + k.brewer + ")" for k in kegs}
     session.close()
     return render_template_string(history_template, events=events, keg_map=keg_map)
 
