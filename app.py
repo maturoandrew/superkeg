@@ -379,28 +379,44 @@ def flow_update(keg_id):
         return jsonify({'success': False, 'error': 'Invalid volume_dispensed'}), 400
     
     session = SessionLocal()
-    keg = subtract_volume(session, keg_id, volume_dispensed)
-    if keg:
-        log_pour_event(session, keg_id, volume_dispensed)
-    session.close()
-    
-    if keg:
-        # Convert to ounces for message logic (assuming volume_dispensed is in liters)
-        volume_oz = volume_dispensed * 33.814  # Convert liters to ounces
-        
-        cheers_msg = get_cheers_message()
-        pour_comment = get_pour_comment(volume_oz)
-        
-        response = {
-            'success': True, 
-            'keg_id': keg.id, 
-            'volume_remaining': keg.volume_remaining,
-            'message': cheers_msg,
-            'pour_comment': pour_comment
-        }
-        return jsonify(response), 200
-    else:
-        return jsonify({'success': False, 'error': 'Keg not found or not tapped'}), 404
+    try:
+        # Get the keg first
+        keg = session.query(Keg).filter(Keg.id == keg_id, Keg.status == KegStatus.TAPPED).first()
+        if keg:
+            # Update the volume
+            keg.volume_remaining = max(0, keg.volume_remaining - volume_dispensed)
+            
+            # Log the pour event
+            from datetime import datetime
+            event = PourEvent(keg_id=keg_id, volume_dispensed=volume_dispensed, timestamp=datetime.utcnow())
+            session.add(event)
+            
+            session.commit()
+            
+            # Get final volume before closing
+            final_volume = keg.volume_remaining
+            
+            # Convert to ounces for message logic (assuming volume_dispensed is in liters)
+            volume_oz = volume_dispensed * 33.814  # Convert liters to ounces
+            
+            cheers_msg = get_cheers_message()
+            pour_comment = get_pour_comment(volume_oz)
+            
+            response = {
+                'success': True, 
+                'keg_id': keg.id, 
+                'volume_remaining': final_volume,
+                'message': cheers_msg,
+                'pour_comment': pour_comment
+            }
+            session.close()
+            return jsonify(response), 200
+        else:
+            session.close()
+            return jsonify({'success': False, 'error': 'Keg not found or not tapped'}), 404
+    except Exception as e:
+        session.close()
+        return jsonify({'success': False, 'error': 'Database error: %s' % str(e)}), 500
 
 @app.route("/delete/<int:keg_id>", methods=["POST"])
 def delete_keg(keg_id):

@@ -61,16 +61,19 @@ class MultiTapFlowSystem(object):
         """Update keg volume in database directly."""
         try:
             session = SessionLocal()
-            keg = subtract_volume(session, keg_id, volume_liters)
+            # Get the keg first
+            keg = session.query(Keg).filter(Keg.id == keg_id, Keg.status == KegStatus.TAPPED).first()
             if keg:
-                # Refresh the object to get updated data
-                session.refresh(keg)
-                remaining_volume = keg.volume_remaining
+                # Update the volume
+                keg.volume_remaining = max(0, keg.volume_remaining - volume_liters)
+                session.commit()
+                # Get the final volume before closing
+                final_volume = keg.volume_remaining
                 session.close()
-                logger.info("Updated keg %d: -%.1fml, remaining: %.2fL" % (keg_id, volume_liters*1000, remaining_volume))
+                logger.info("Updated keg %d: -%.1fml, remaining: %.2fL" % (keg_id, volume_liters*1000, final_volume))
             else:
                 session.close()
-                logger.warning("Failed to update keg %d volume" % keg_id)
+                logger.warning("Failed to update keg %d volume - keg not found or not tapped" % keg_id)
         except Exception as e:
             logger.error("Database error updating keg %d: %s" % (keg_id, str(e)))
     
@@ -78,10 +81,12 @@ class MultiTapFlowSystem(object):
         """Log pour event to database directly."""
         try:
             session = SessionLocal()
-            event = log_pour_event(session, keg_id, volume_liters)
-            if event:
-                logger.info("Logged pour event: keg %d, %.1fml" % (keg_id, volume_liters*1000))
+            from datetime import datetime
+            event = PourEvent(keg_id=keg_id, volume_dispensed=volume_liters, timestamp=datetime.utcnow())
+            session.add(event)
+            session.commit()
             session.close()
+            logger.info("Logged pour event: keg %d, %.1fml" % (keg_id, volume_liters*1000))
         except Exception as e:
             logger.error("Database error logging pour for keg %d: %s" % (keg_id, str(e)))
     
