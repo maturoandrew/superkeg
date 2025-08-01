@@ -38,10 +38,10 @@ sudo apt update
 sudo apt upgrade -y
 
 # Install Python GPIO library (if not already installed)
-sudo apt install python3-rpi.gpio
+sudo apt install python-rpi.gpio
 
-# Install other Python dependencies
-pip3 install --user requests
+# Install other Python dependencies (for Python 2)
+pip install --user requests
 ```
 
 ### 2. Deploy Code
@@ -59,7 +59,7 @@ chmod +x setup_flow_meter.py
 
 ```bash
 # Test your flow meter is working
-python3 setup_flow_meter.py
+python setup_flow_meter.py
 ```
 
 This will:
@@ -71,7 +71,7 @@ This will:
 
 ```bash
 # Test the complete system (Flask + Flow Monitoring)
-python3 start_superkeg.py
+python start_superkeg.py
 ```
 
 This will:

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Flow Meter Tracking Module for Raspberry Pi
 Tracks flow meter pulses and calculates volume dispensed for keg monitoring system.
@@ -11,7 +11,7 @@ Supports common flow meters like:
 Hardware Setup:
 - Flow meter VCC -> 5V (or 3.3V depending on sensor)
 - Flow meter GND -> GND
-- Flow meter Signal -> GPIO pin (default GPIO 18)
+- Flow meter Signal -> GPIO pin (default GPIO 4)
 - Pull-up resistor may be needed (10kΩ between signal and VCC)
 """
 
@@ -19,7 +19,6 @@ import time
 import threading
 import json
 from datetime import datetime
-from typing import Callable, Optional, Dict, Any
 import logging
 
 try:
@@ -34,7 +33,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class FlowMeter:
+class FlowMeter(object):
     """
     Flow meter class that tracks pulses and calculates volume.
     
@@ -48,16 +47,16 @@ class FlowMeter:
         is_monitoring (bool): Whether monitoring is active
     """
     
-    def __init__(self, gpio_pin: int = 4, pulses_per_liter: float = 450.0):
+    def __init__(self, gpio_pin=4, pulses_per_liter=450.0):
         """
         Initialize flow meter.
         
-                 Args:
-             gpio_pin: GPIO pin number for flow meter signal (default: 4)
-             pulses_per_liter: Calibration factor (pulses per liter)
-                              Common values:
-                              - YF-S201: ~450 pulses/L
-                              - YF-S401: ~5880 pulses/L
+        Args:
+            gpio_pin: GPIO pin number for flow meter signal (default: 4)
+            pulses_per_liter: Calibration factor (pulses per liter)
+                             Common values:
+                             - YF-S201: ~450 pulses/L
+                             - YF-S401: ~5880 pulses/L
         """
         self.gpio_pin = gpio_pin
         self.pulses_per_liter = pulses_per_liter
@@ -73,12 +72,12 @@ class FlowMeter:
         self.flow_rate_window = 10  # seconds
         
         # Callbacks
-        self.on_pulse_callback: Optional[Callable] = None
-        self.on_volume_callback: Optional[Callable[[float], None]] = None
-        self.on_flow_rate_callback: Optional[Callable[[float], None]] = None
+        self.on_pulse_callback = None
+        self.on_volume_callback = None
+        self.on_flow_rate_callback = None
         
         # Threading
-        self.monitor_thread: Optional[threading.Thread] = None
+        self.monitor_thread = None
         self.stop_monitoring = threading.Event()
         
         # Setup GPIO if available
@@ -90,9 +89,9 @@ class FlowMeter:
         try:
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(self.gpio_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            logger.info(f"GPIO pin {self.gpio_pin} configured for flow meter")
+            logger.info("GPIO pin %d configured for flow meter" % self.gpio_pin)
         except Exception as e:
-            logger.error(f"Failed to setup GPIO: {e}")
+            logger.error("Failed to setup GPIO: %s" % str(e))
             raise
     
     def _pulse_detected(self, channel):
@@ -154,7 +153,7 @@ class FlowMeter:
                 callback=self._pulse_detected,
                 bouncetime=1  # 1ms debounce
             )
-            logger.info(f"Started monitoring flow meter on GPIO {self.gpio_pin}")
+            logger.info("Started monitoring flow meter on GPIO %d" % self.gpio_pin)
         else:
             # Simulation mode - start a thread that simulates pulses
             self.monitor_thread = threading.Thread(target=self._simulate_flow)
@@ -194,10 +193,10 @@ class FlowMeter:
         self.pulse_count = 0
         self.volume_total = 0.0
         self.flow_rate = 0.0
-        self.pulse_times.clear()
+        self.pulse_times = []
         logger.info("Flow meter reset")
     
-    def calibrate(self, known_volume_liters: float):
+    def calibrate(self, known_volume_liters):
         """
         Calibrate the flow meter using a known volume.
         
@@ -207,12 +206,13 @@ class FlowMeter:
         if self.pulse_count > 0:
             self.pulses_per_liter = self.pulse_count / known_volume_liters
             self.volume_total = known_volume_liters
-            logger.info(f"Calibrated: {self.pulses_per_liter:.2f} pulses/L")
+            logger.info("Calibrated: %.2f pulses/L" % self.pulses_per_liter)
         else:
             logger.warning("No pulses detected for calibration")
     
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self):
         """Get current flow meter status."""
+        uptime = time.time() - self.start_time if self.is_monitoring else 0
         return {
             'gpio_pin': self.gpio_pin,
             'pulses_per_liter': self.pulses_per_liter,
@@ -222,10 +222,10 @@ class FlowMeter:
             'flow_rate_l_per_min': self.flow_rate,
             'flow_rate_ml_per_min': self.flow_rate * 1000,
             'is_monitoring': self.is_monitoring,
-            'uptime_seconds': time.time() - self.start_time if self.is_monitoring else 0
+            'uptime_seconds': uptime
         }
     
-    def save_calibration(self, filename: str = 'flow_meter_config.json'):
+    def save_calibration(self, filename='flow_meter_config.json'):
         """Save calibration data to file."""
         config = {
             'gpio_pin': self.gpio_pin,
@@ -234,19 +234,19 @@ class FlowMeter:
         }
         with open(filename, 'w') as f:
             json.dump(config, f, indent=2)
-        logger.info(f"Calibration saved to {filename}")
+        logger.info("Calibration saved to %s" % filename)
     
-    def load_calibration(self, filename: str = 'flow_meter_config.json'):
+    def load_calibration(self, filename='flow_meter_config.json'):
         """Load calibration data from file."""
         try:
             with open(filename, 'r') as f:
                 config = json.load(f)
             self.pulses_per_liter = config.get('pulses_per_liter', self.pulses_per_liter)
-            logger.info(f"Calibration loaded from {filename}: {self.pulses_per_liter} pulses/L")
-        except FileNotFoundError:
-            logger.warning(f"Calibration file {filename} not found")
+            logger.info("Calibration loaded from %s: %s pulses/L" % (filename, self.pulses_per_liter))
+        except IOError:
+            logger.warning("Calibration file %s not found" % filename)
         except Exception as e:
-            logger.error(f"Error loading calibration: {e}")
+            logger.error("Error loading calibration: %s" % str(e))
     
     def cleanup(self):
         """Clean up GPIO resources."""
@@ -256,17 +256,16 @@ class FlowMeter:
                 GPIO.cleanup(self.gpio_pin)
                 logger.info("GPIO cleanup completed")
             except Exception as e:
-                logger.warning(f"GPIO cleanup error: {e}")
+                logger.warning("GPIO cleanup error: %s" % str(e))
 
 
-class KegFlowTracker:
+class KegFlowTracker(object):
     """
     Integrates flow meter with keg tracking system.
     Automatically updates keg volumes and logs pour events.
     """
     
-    def __init__(self, flow_meter: FlowMeter, keg_id: int, 
-                 pour_threshold_ml: float = 50.0):
+    def __init__(self, flow_meter, keg_id, pour_threshold_ml=50.0):
         """
         Initialize keg flow tracker.
         
@@ -286,8 +285,8 @@ class KegFlowTracker:
         self.pour_timeout = 5.0  # seconds without flow to end pour
         
         # Callbacks for keg system integration
-        self.update_keg_callback: Optional[Callable[[int, float], None]] = None
-        self.log_pour_callback: Optional[Callable[[int, float], None]] = None
+        self.update_keg_callback = None
+        self.log_pour_callback = None
         
         # Setup flow meter callbacks
         self.flow_meter.on_volume_callback = self._on_volume_change
@@ -298,19 +297,19 @@ class KegFlowTracker:
         self.monitor_thread.daemon = True
         self.stop_monitoring = threading.Event()
     
-    def _on_volume_change(self, total_volume_liters: float):
+    def _on_volume_change(self, total_volume_liters):
         """Called when flow meter detects volume change."""
         current_time = time.time()
         
         if not self.is_pouring:
             self.is_pouring = True
             self.pour_start_time = current_time
-            logger.info(f"Pour started for keg {self.keg_id}")
+            logger.info("Pour started for keg %d" % self.keg_id)
         
         # Reset pour timeout
         self.last_flow_time = current_time
     
-    def _on_flow_rate_change(self, flow_rate_l_per_min: float):
+    def _on_flow_rate_change(self, flow_rate_l_per_min):
         """Called when flow rate changes."""
         # This can be used for real-time monitoring or alerts
         pass
@@ -335,7 +334,7 @@ class KegFlowTracker:
                         if self.update_keg_callback:
                             self.update_keg_callback(self.keg_id, volume_poured)
                         
-                        logger.info(f"Pour logged: {volume_poured_ml:.1f}ml for keg {self.keg_id}")
+                        logger.info("Pour logged: %.1fml for keg %d" % (volume_poured_ml, self.keg_id))
                     
                     # Reset pour tracking
                     self.is_pouring = False
@@ -351,16 +350,16 @@ class KegFlowTracker:
         self.monitor_thread.daemon = True
         self.monitor_thread.start()
         self.last_flow_time = time.time()
-        logger.info(f"Started tracking flow for keg {self.keg_id}")
+        logger.info("Started tracking flow for keg %d" % self.keg_id)
     
     def stop_tracking(self):
         """Stop tracking flow for this keg."""
         self.stop_monitoring.set()
         if self.monitor_thread.is_alive():
             self.monitor_thread.join(timeout=1.0)
-        logger.info(f"Stopped tracking flow for keg {self.keg_id}")
+        logger.info("Stopped tracking flow for keg %d" % self.keg_id)
     
-    def get_pour_stats(self) -> Dict[str, Any]:
+    def get_pour_stats(self):
         """Get current pour statistics."""
         return {
             'keg_id': self.keg_id,
@@ -383,10 +382,10 @@ def test_flow_meter():
     
     # Add callbacks for testing
     def on_pulse():
-        print(f"Pulse detected! Total: {flow_meter.pulse_count}")
+        print("Pulse detected! Total: %d" % flow_meter.pulse_count)
     
     def on_volume(volume):
-        print(f"Volume: {volume*1000:.1f}ml, Flow rate: {flow_meter.flow_rate*1000:.1f}ml/min")
+        print("Volume: %.1fml, Flow rate: %.1fml/min" % (volume*1000, flow_meter.flow_rate*1000))
     
     flow_meter.on_pulse_callback = on_pulse
     flow_meter.on_volume_callback = on_volume
