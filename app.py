@@ -126,6 +126,12 @@ template = '''
         .pour-content.complete .pour-status { 
             color: #007bff; 
         }
+        .pour-content.timeout .pour-status { 
+            color: #dc3545; 
+        }
+        .pour-content.timeout {
+            border: 2px solid #dc3545;
+        }
         @media (max-width: 900px) {
             .keg-row { flex-wrap: wrap; }
             .keg-card { max-width: 100%; margin: 1rem 0; }
@@ -166,6 +172,7 @@ template = '''
             popup = document.createElement('div');
             popup.id = 'pour-popup-' + kegId;
             popup.className = 'pour-popup';
+            popup.dataset.startTime = Date.now();
             popup.innerHTML = `
                 <div class="pour-content">
                     <h2>[BEER] Pouring Beer!</h2>
@@ -209,6 +216,22 @@ template = '''
         }
     }
     
+    // Function to handle pour timeout
+    function timeoutPour(kegId) {
+        const popup = document.getElementById('pour-popup-' + kegId);
+        if (popup) {
+            popup.querySelector('.pour-status').textContent = 'Pour Timeout - No Flow Detected';
+            popup.querySelector('.pour-content').classList.add('timeout');
+            
+            // Remove popup after 2 seconds
+            setTimeout(() => {
+                if (popup.parentNode) {
+                    popup.parentNode.removeChild(popup);
+                }
+            }, 2000);
+        }
+    }
+    
     // Check for active pours every 500ms
     setInterval(() => {
         fetch('/api/active-pours')
@@ -229,6 +252,30 @@ template = '''
             })
             .catch(error => console.log('No active pours'));
     }, 500);
+    
+    // Check for timeouts every 2 seconds
+    setInterval(() => {
+        fetch('/api/active-pours')
+            .then(response => response.json())
+            .then(data => {
+                // Check if any active pours have been running too long
+                if (data.active_pours) {
+                    data.active_pours.forEach(pour => {
+                        const popup = document.getElementById('pour-popup-' + pour.keg_id);
+                        if (popup) {
+                            const startTime = popup.dataset.startTime;
+                            if (startTime) {
+                                const elapsed = Date.now() - parseInt(startTime);
+                                if (elapsed > 10000) { // 10 seconds timeout
+                                    timeoutPour(pour.keg_id);
+                                }
+                            }
+                        }
+                    });
+                }
+            })
+            .catch(error => console.log('Timeout check failed'));
+    }, 2000);
     </script>
 </body>
 </html>
