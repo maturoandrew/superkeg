@@ -116,6 +116,7 @@ def subtract_volume(session, keg_id, volume_dispensed):
     if keg:
         keg.volume_remaining = max(0, keg.volume_remaining - volume_dispensed)
         session.commit()
+        session.refresh(keg)  # Refresh to ensure we have the latest data
         return keg
     return None
 

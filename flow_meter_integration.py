@@ -63,10 +63,14 @@ class MultiTapFlowSystem(object):
             session = SessionLocal()
             keg = subtract_volume(session, keg_id, volume_liters)
             if keg:
-                logger.info("Updated keg %d: -%.1fml, remaining: %.2fL" % (keg_id, volume_liters*1000, keg.volume_remaining))
+                # Refresh the object to get updated data
+                session.refresh(keg)
+                remaining_volume = keg.volume_remaining
+                session.close()
+                logger.info("Updated keg %d: -%.1fml, remaining: %.2fL" % (keg_id, volume_liters*1000, remaining_volume))
             else:
+                session.close()
                 logger.warning("Failed to update keg %d volume" % keg_id)
-            session.close()
         except Exception as e:
             logger.error("Database error updating keg %d: %s" % (keg_id, str(e)))
     
