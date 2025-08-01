@@ -93,7 +93,7 @@ template = '''
         const notification = document.createElement('div');
         notification.className = 'alert alert-success notification';
         notification.innerHTML = `
-            <strong>🍺 Beer Poured!</strong><br>
+            <strong>[BEER] Beer Poured!</strong><br>
             <strong>${kegName}</strong><br>
             ${volumeLiters.toFixed(2)}L (${volumeOz.toFixed(1)}oz)
         `;
