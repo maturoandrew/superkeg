@@ -42,7 +42,6 @@ def get_current_tap_config():
     try:
         session = SessionLocal()
         tapped_kegs = session.query(Keg).filter(Keg.status == KegStatus.TAPPED).all()
-        session.close()
         
         # Default GPIO pin mapping for 4 taps
         # Adjust these GPIO pins based on your actual wiring
@@ -57,6 +56,8 @@ def get_current_tap_config():
                     "pulses_per_liter": 450.0  # Default for YF-S201, adjust as needed
                 })
                 logger.info("Found tapped keg: %s at tap %d" % (keg.name, keg.tap_position))
+        
+        session.close()
         
         return tap_configs
     except Exception as e:

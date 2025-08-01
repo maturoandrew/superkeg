@@ -107,7 +107,11 @@ class MultiTapFlowSystem(object):
         try:
             session = SessionLocal()
             tapped_kegs = session.query(Keg).filter(Keg.status == KegStatus.TAPPED).all()
-            tap_to_keg = {keg.tap_position: keg.id for keg in tapped_kegs if keg.tap_position}
+            # Create a dictionary with keg data before closing session
+            tap_to_keg = {}
+            for keg in tapped_kegs:
+                if keg.tap_position:
+                    tap_to_keg[keg.tap_position] = keg.id
             session.close()
             return tap_to_keg
         except Exception as e:
