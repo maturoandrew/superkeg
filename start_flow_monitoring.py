@@ -19,7 +19,7 @@ try:
     from flow_meter_integration import MultiTapFlowSystem
     from keg_app import SessionLocal, Keg, KegStatus
 except ImportError as e:
-    print(f"Error importing modules: {e}")
+    print("Error importing modules: %s" % str(e))
     print("Make sure you're running this on a Raspberry Pi with all dependencies installed.")
     sys.exit(1)
 
@@ -56,11 +56,11 @@ def get_current_tap_config():
                     "gpio_pin": gpio_pins[keg.tap_position],
                     "pulses_per_liter": 450.0  # Default for YF-S201, adjust as needed
                 })
-                logger.info(f"Found tapped keg: {keg.name} at tap {keg.tap_position}")
+                logger.info("Found tapped keg: %s at tap %d" % (keg.name, keg.tap_position))
         
         return tap_configs
     except Exception as e:
-        logger.error(f"Error getting tap configuration: {e}")
+        logger.error("Error getting tap configuration: %s" % str(e))
         return []
 
 def main():
@@ -89,7 +89,7 @@ def main():
         
         # Setup signal handlers for clean shutdown
         def signal_handler(signum, frame):
-            logger.info(f"Received signal {signum}, shutting down...")
+            logger.info("Received signal %d, shutting down..." % signum)
             flow_system.stop_all()
             sys.exit(0)
         
@@ -100,7 +100,7 @@ def main():
         flow_system.start_all()
         
         logger.info("Flow meter system started successfully!")
-        logger.info(f"Monitoring {len(tap_configs)} taps")
+        logger.info("Monitoring %d taps" % len(tap_configs))
         logger.info("Press Ctrl+C to stop, or send SIGTERM to shutdown cleanly")
         
         # Main monitoring loop
@@ -110,17 +110,17 @@ def main():
             # Log system status
             status = flow_system.get_system_status()
             if status['active_taps'] > 0:
-                logger.info(f"System running: {status['active_taps']} active taps")
+                logger.info("System running: %d active taps" % status['active_taps'])
                 for tap_num, tap_status in status['taps'].items():
                     volume_ml = tap_status['total_volume_dispensed_ml']
                     flow_rate = tap_status['current_flow_rate_ml_per_min']
                     if volume_ml > 0 or flow_rate > 0:
-                        logger.info(f"  Tap {tap_num}: {volume_ml:.1f}ml total, {flow_rate:.1f}ml/min")
+                        logger.info("  Tap %d: %.1fml total, %.1fml/min" % (tap_num, volume_ml, flow_rate))
     
     except KeyboardInterrupt:
         logger.info("Shutdown requested by user")
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        logger.error("Unexpected error: %s" % str(e))
         import traceback
         logger.error(traceback.format_exc())
     finally:

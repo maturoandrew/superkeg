@@ -18,7 +18,7 @@ def countPulse(channel):
 
 GPIO.add_event_detect(FLOW_SENSOR, GPIO.RISING, callback=countPulse, bouncetime=1)
 
-print(f"Flow sensor monitoring started on GPIO {FLOW_SENSOR}")
+print("Flow sensor monitoring started on GPIO %d" % FLOW_SENSOR)
 print("Pour liquid through the sensor or manually trigger it...")
 print("Press Ctrl+C to stop")
 
@@ -26,7 +26,7 @@ while True:
     try:
         time.sleep(1)
         if count > 0:
-            print(f"Total pulses: {count}")
+            print("Total pulses: %d" % count)
     except KeyboardInterrupt:
         print('\nInterrupt received')
         GPIO.cleanup()
