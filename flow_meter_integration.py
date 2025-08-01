@@ -70,34 +70,34 @@ class MultiTapFlowSystem(object):
         except Exception as e:
             logger.error("Database error updating keg %d: %s" % (keg_id, str(e)))
     
-    def _log_pour_event_db(self, keg_id: int, volume_liters: float):
+    def _log_pour_event_db(self, keg_id, volume_liters):
         """Log pour event to database directly."""
         try:
             session = SessionLocal()
             event = log_pour_event(session, keg_id, volume_liters)
             if event:
-                logger.info(f"Logged pour event: keg {keg_id}, {volume_liters*1000:.1f}ml")
+                logger.info("Logged pour event: keg %d, %.1fml" % (keg_id, volume_liters*1000))
             session.close()
         except Exception as e:
-            logger.error(f"Database error logging pour for keg {keg_id}: {e}")
+            logger.error("Database error logging pour for keg %d: %s" % (keg_id, str(e)))
     
-    def _update_keg_volume_api(self, keg_id: int, volume_liters: float):
+    def _update_keg_volume_api(self, keg_id, volume_liters):
         """Update keg volume via Flask API."""
         try:
-            url = f"{self.flask_base_url}/api/flow/{keg_id}"
+            url = "%s/api/flow/%d" % (self.flask_base_url, keg_id)
             data = {"volume_dispensed": volume_liters}
             response = requests.post(url, json=data, timeout=5)
             
             if response.status_code == 200:
-                logger.info(f"API updated keg {keg_id}: -{volume_liters*1000:.1f}ml")
+                logger.info("API updated keg %d: -%.1fml" % (keg_id, volume_liters*1000))
             else:
-                logger.warning(f"API update failed for keg {keg_id}: {response.status_code}")
+                logger.warning("API update failed for keg %d: %d" % (keg_id, response.status_code))
                 # Fallback to direct database update
                 self._update_keg_volume_db(keg_id, volume_liters)
                 self._log_pour_event_db(keg_id, volume_liters)
                 
         except requests.RequestException as e:
-            logger.warning(f"API request failed for keg {keg_id}: {e}")
+            logger.warning("API request failed for keg %d: %s" % (keg_id, str(e)))
             # Fallback to direct database update
             self._update_keg_volume_db(keg_id, volume_liters)
             self._log_pour_event_db(keg_id, volume_liters)
@@ -111,10 +111,10 @@ class MultiTapFlowSystem(object):
             session.close()
             return tap_to_keg
         except Exception as e:
-            logger.error(f"Error getting tapped kegs: {e}")
+            logger.error("Error getting tapped kegs: %s" % str(e))
             return {}
     
-    def setup_tap(self, tap_number: int, gpio_pin: int, pulses_per_liter: float = 450.0):
+    def setup_tap(self, tap_number, gpio_pin, pulses_per_liter=450.0):
         """Setup a flow meter for a specific tap."""
         try:
             # Get keg ID for this tap
@@ -122,14 +122,14 @@ class MultiTapFlowSystem(object):
             keg_id = tap_to_keg.get(tap_number)
             
             if not keg_id:
-                logger.warning(f"No keg tapped at position {tap_number}, skipping setup")
+                logger.warning("No keg tapped at position %d, skipping setup" % tap_number)
                 return False
             
             # Create flow meter
             flow_meter = FlowMeter(gpio_pin=gpio_pin, pulses_per_liter=pulses_per_liter)
             
             # Load calibration if exists
-            config_file = f"tap_{tap_number}_config.json"
+            config_file = "tap_%d_config.json" % tap_number
             flow_meter.load_calibration(config_file)
             
             # Create keg flow tracker
@@ -142,27 +142,27 @@ class MultiTapFlowSystem(object):
             # Store tracker
             self.flow_trackers[tap_number] = tracker
             
-            logger.info(f"Setup tap {tap_number} (GPIO {gpio_pin}) for keg {keg_id}")
+            logger.info("Setup tap %d (GPIO %d) for keg %d" % (tap_number, gpio_pin, keg_id))
             return True
             
         except Exception as e:
-            logger.error(f"Error setting up tap {tap_number}: {e}")
+            logger.error("Error setting up tap %d: %s" % (tap_number, str(e)))
             return False
     
-    def start_tap(self, tap_number: int):
+    def start_tap(self, tap_number):
         """Start monitoring a specific tap."""
         if tap_number in self.flow_trackers:
             self.flow_trackers[tap_number].start_tracking()
-            logger.info(f"Started monitoring tap {tap_number}")
+            logger.info("Started monitoring tap %d" % tap_number)
         else:
-            logger.warning(f"Tap {tap_number} not configured")
+            logger.warning("Tap %d not configured" % tap_number)
     
-    def stop_tap(self, tap_number: int):
+    def stop_tap(self, tap_number):
         """Stop monitoring a specific tap."""
         if tap_number in self.flow_trackers:
             self.flow_trackers[tap_number].stop_tracking()
             self.flow_trackers[tap_number].flow_meter.cleanup()
-            logger.info(f"Stopped monitoring tap {tap_number}")
+            logger.info("Stopped monitoring tap %d" % tap_number)
     
     def start_all(self):
         """Start monitoring all configured taps."""
@@ -178,7 +178,7 @@ class MultiTapFlowSystem(object):
                 self.start_tap(tap_num)
         
         self.running = True
-        logger.info(f"Started monitoring {len(self.flow_trackers)} taps")
+        logger.info("Started monitoring %d taps" % len(self.flow_trackers))
     
     def stop_all(self):
         """Stop monitoring all taps."""
@@ -206,25 +206,25 @@ class MultiTapFlowSystem(object):
         
         return status
     
-    def calibrate_tap(self, tap_number: int, known_volume_liters: float):
+    def calibrate_tap(self, tap_number, known_volume_liters):
         """Calibrate a specific tap's flow meter."""
         if tap_number in self.flow_trackers:
             tracker = self.flow_trackers[tap_number]
             tracker.flow_meter.calibrate(known_volume_liters)
             
             # Save calibration
-            config_file = f"tap_{tap_number}_config.json"
+            config_file = "tap_%d_config.json" % tap_number
             tracker.flow_meter.save_calibration(config_file)
             
-            logger.info(f"Calibrated tap {tap_number} with {known_volume_liters}L")
+            logger.info("Calibrated tap %d with %.3fL" % (tap_number, known_volume_liters))
         else:
-            logger.warning(f"Tap {tap_number} not found for calibration")
+            logger.warning("Tap %d not found for calibration" % tap_number)
     
-    def reset_tap_volume(self, tap_number: int):
+    def reset_tap_volume(self, tap_number):
         """Reset volume counter for a specific tap."""
         if tap_number in self.flow_trackers:
             self.flow_trackers[tap_number].flow_meter.reset()
-            logger.info(f"Reset volume counter for tap {tap_number}")
+            logger.info("Reset volume counter for tap %d" % tap_number)
 
 
 def main():
@@ -253,17 +253,17 @@ def main():
             
             # Print system status
             status = flow_system.get_system_status()
-            logger.info(f"System status: {status['active_taps']} active taps")
+            logger.info("System status: %d active taps" % status['active_taps'])
             
             for tap_num, tap_status in status['taps'].items():
                 volume_ml = tap_status['total_volume_dispensed_ml']
                 flow_rate = tap_status['current_flow_rate_ml_per_min']
-                logger.info(f"  Tap {tap_num}: {volume_ml:.1f}ml total, {flow_rate:.1f}ml/min")
+                logger.info("  Tap %d: %.1fml total, %.1fml/min" % (tap_num, volume_ml, flow_rate))
     
     except KeyboardInterrupt:
         logger.info("Shutdown requested by user")
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        logger.error("Unexpected error: %s" % str(e))
     finally:
         flow_system.stop_all()
         logger.info("Flow meter system shutdown complete")
@@ -292,15 +292,15 @@ def calibration_example():
         if pulse_count > 0:
             # Calculate actual pulses per liter
             actual_ppl = pulse_count / known_volume
-            print(f"\nCalibration results:")
-            print(f"  Pulses detected: {pulse_count}")
-            print(f"  Known volume: {known_volume}L")
-            print(f"  Calculated: {actual_ppl:.2f} pulses/L")
+            print("\nCalibration results:")
+            print("  Pulses detected: %d" % pulse_count)
+            print("  Known volume: %.3fL" % known_volume)
+            print("  Calculated: %.2f pulses/L" % actual_ppl)
             
             # Apply calibration
             flow_meter.calibrate(known_volume)
             flow_meter.save_calibration("calibration_example.json")
-            print(f"  Calibration saved!")
+            print("  Calibration saved!")
         else:
             print("No pulses detected. Check flow meter connection.")
     
