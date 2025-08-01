@@ -67,7 +67,7 @@ template = '''
     <div class="keg-row">
     {% for keg in kegs %}
         <div class="card keg-card {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}low-volume{% endif %}">
-            <div class="tap-label">Tap {{ loop.index }}</div>
+            <div class="tap-label">Tap {{ keg.tap_position }}</div>
             <div class="card-body">
                 <h2 class="card-title">{{ keg.name }} {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}<span title="Low Volume" style="color:#dc3545;">!</span>{% endif %}</h2>
                 <p class="card-text"><strong>Brewer:</strong> {{ keg.brewer }}</p>
@@ -125,7 +125,7 @@ management_template = '''
     
     <h2 class="mt-4">All Kegs</h2>
     <table class="table table-bordered">
-        <thead><tr><th>ID</th><th>Name</th><th>Style</th><th>Brewer</th><th>ABV</th><th>Volume</th><th>Status</th><th>Last Tapped</th><th>Finished</th><th>Actions</th></tr></thead>
+        <thead><tr><th>ID</th><th>Name</th><th>Style</th><th>Brewer</th><th>ABV</th><th>Volume</th><th>Tap</th><th>Status</th><th>Last Tapped</th><th>Finished</th><th>Actions</th></tr></thead>
         <tbody>
         {% for keg in kegs %}
         <tr>
@@ -135,6 +135,7 @@ management_template = '''
             <td>{{ keg.brewer }}</td>
             <td>{{ keg.abv }}</td>
             <td>{{ keg.volume_remaining }}</td>
+            <td>{{ keg.tap_position or '' }}</td>
             <td>{{ keg.status.value }}</td>
             <td>{{ keg.date_last_tapped or '' }}</td>
             <td>{{ keg.date_finished or '' }}</td>
@@ -190,7 +191,7 @@ display_template = '''
     <div class="keg-row">
     {% for keg in kegs %}
         <div class="card keg-card {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}low-volume{% endif %}">
-            <div class="tap-label">Tap {{ loop.index }}</div>
+            <div class="tap-label">Tap {{ keg.tap_position }}</div>
             <div class="card-body">
                 <h2 class="card-title">{{ keg.name }} {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}<span title="Low Volume" style="color:#dc3545;">!</span>{% endif %}</h2>
                 <p class="card-text"><strong>Brewer:</strong> {{ keg.brewer }}</p>
@@ -305,7 +306,7 @@ def is_low_volume(keg):
 @app.route("/")
 def index():
     session = SessionLocal()
-    kegs = session.query(Keg).filter(Keg.status == KegStatus.TAPPED).all()
+    kegs = session.query(Keg).filter(Keg.status == KegStatus.TAPPED).order_by(Keg.tap_position).all()
     session.close()
     return render_template_string(template, kegs=kegs, keg_status=KegStatus)
 
@@ -354,7 +355,7 @@ def off_tap(keg_id):
 @app.route("/display")
 def display():
     session = SessionLocal()
-    kegs = session.query(Keg).filter(Keg.status == KegStatus.TAPPED).all()
+    kegs = session.query(Keg).filter(Keg.status == KegStatus.TAPPED).order_by(Keg.tap_position).all()
     session.close()
     return render_template_string(display_template, kegs=kegs)
 

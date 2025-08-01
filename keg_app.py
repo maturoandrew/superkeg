@@ -25,6 +25,7 @@ class Keg(Base):
     abv = Column(Float, nullable=False)
     volume_remaining = Column(Float, nullable=False)
     original_volume = Column(Float, nullable=True)  # New field
+    tap_position = Column(Integer, nullable=True)  # Track which tap (1-4)
     date_created = Column(DateTime, default=datetime.utcnow)
     date_last_tapped = Column(DateTime, nullable=True)
     date_finished = Column(DateTime, nullable=True)
@@ -56,10 +57,30 @@ def input_new_keg(session, name, style, brewer, abv, volume_remaining):
     session.refresh(new_keg)
     return new_keg
 
+def get_next_available_tap_position(session):
+    """Get the next available tap position (1-4)"""
+    used_positions = set()
+    tapped_kegs = session.query(Keg).filter(Keg.status == KegStatus.TAPPED).all()
+    for keg in tapped_kegs:
+        if keg.tap_position:
+            used_positions.add(keg.tap_position)
+    
+    # Find the first available position (1-4)
+    for position in range(1, 5):
+        if position not in used_positions:
+            return position
+    return None  # No available positions
+
 def tap_new_keg(session, keg_id):
     keg = session.query(Keg).filter(Keg.id == keg_id).first()
     if keg and keg.status == KegStatus.UNTAPPED:
+        # Assign tap position
+        tap_position = get_next_available_tap_position(session)
+        if tap_position is None:
+            return None  # No available taps
+        
         keg.status = KegStatus.TAPPED
+        keg.tap_position = tap_position
         keg.date_last_tapped = datetime.utcnow()
         session.commit()
         return keg
@@ -68,7 +89,13 @@ def tap_new_keg(session, keg_id):
 def tap_previous_keg(session, keg_id):
     keg = session.query(Keg).filter(Keg.id == keg_id).first()
     if keg and keg.status == KegStatus.OFF_TAP:
+        # Assign tap position
+        tap_position = get_next_available_tap_position(session)
+        if tap_position is None:
+            return None  # No available taps
+        
         keg.status = KegStatus.TAPPED
+        keg.tap_position = tap_position
         keg.date_last_tapped = datetime.utcnow()
         session.commit()
         return keg
@@ -78,6 +105,7 @@ def take_keg_off_tap(session, keg_id):
     keg = session.query(Keg).filter(Keg.id == keg_id).first()
     if keg and keg.status == KegStatus.TAPPED:
         keg.status = KegStatus.OFF_TAP
+        keg.tap_position = None  # Clear tap position
         keg.date_finished = datetime.utcnow()
         session.commit()
         return keg
