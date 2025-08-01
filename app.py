@@ -54,7 +54,72 @@ template = '''
         .keg-card { flex: 1 1 0; max-width: 25%; min-width: 220px; margin: 0 1rem; }
         .low-volume { border: 3px solid #dc3545 !important; box-shadow: 0 0 10px #dc3545; }
         .tap-label { font-weight: bold; font-size: 1.2rem; color: #0d6efd; text-align: center; margin-bottom: 0.5rem; }
-        .notification { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .pour-popup { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.8); 
+            z-index: 9999; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .pour-content { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 15px; 
+            text-align: center; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            max-width: 500px; 
+            width: 90%; 
+        }
+        .pour-content h2 { 
+            color: #28a745; 
+            margin-bottom: 10px; 
+            font-size: 2rem; 
+        }
+        .pour-content h3 { 
+            color: #333; 
+            margin-bottom: 20px; 
+            font-size: 1.5rem; 
+        }
+        .volume-display { 
+            margin: 20px 0; 
+        }
+        .current-volume { 
+            font-size: 3rem; 
+            font-weight: bold; 
+            color: #007bff; 
+            margin-bottom: 10px; 
+        }
+        .volume-bar { 
+            width: 100%; 
+            height: 20px; 
+            background: #e9ecef; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            margin: 10px 0; 
+        }
+        .volume-fill { 
+            height: 100%; 
+            background: linear-gradient(90deg, #28a745, #20c997); 
+            transition: width 0.3s ease; 
+        }
+        .volume-text { 
+            font-size: 1.2rem; 
+            color: #666; 
+        }
+        .pour-status { 
+            font-size: 1.3rem; 
+            color: #28a745; 
+            margin-top: 15px; 
+            font-weight: bold; 
+        }
+        .pour-content.complete .pour-status { 
+            color: #007bff; 
+        }
         @media (max-width: 900px) {
             .keg-row { flex-wrap: wrap; }
             .keg-card { max-width: 100%; margin: 1rem 0; }
@@ -83,44 +148,81 @@ template = '''
     {% endfor %}
     </div>
     
-    <!-- Notification container -->
-    <div id="notification-container"></div>
-    
     <script>
-    // Function to show pour notification
-    function showPourNotification(kegName, volumeLiters, volumeOz) {
-        const container = document.getElementById('notification-container');
-        const notification = document.createElement('div');
-        notification.className = 'alert alert-success notification';
-        notification.innerHTML = `
-            <strong>[BEER] Beer Poured!</strong><br>
-            <strong>${kegName}</strong><br>
-            ${volumeLiters.toFixed(2)}L (${volumeOz.toFixed(1)}oz)
-        `;
+    let activePours = new Map(); // Track active pours by keg_id
+    
+    // Function to show big pour progress popup
+    function showPourProgress(kegId, kegName, currentVolume, totalVolume) {
+        let popup = document.getElementById('pour-popup-' + kegId);
         
-        container.appendChild(notification);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 5000);
+        if (!popup) {
+            // Create new popup
+            popup = document.createElement('div');
+            popup.id = 'pour-popup-' + kegId;
+            popup.className = 'pour-popup';
+            popup.innerHTML = `
+                <div class="pour-content">
+                    <h2>[BEER] Pouring Beer!</h2>
+                    <h3>${kegName}</h3>
+                    <div class="volume-display">
+                        <div class="current-volume">${currentVolume.toFixed(2)}L</div>
+                        <div class="volume-bar">
+                            <div class="volume-fill" style="width: ${(currentVolume / totalVolume * 100)}%"></div>
+                        </div>
+                        <div class="volume-text">${(currentVolume * 33.814).toFixed(1)}oz</div>
+                    </div>
+                    <div class="pour-status">Pouring...</div>
+                </div>
+            `;
+            document.body.appendChild(popup);
+        } else {
+            // Update existing popup
+            const volumeFill = popup.querySelector('.volume-fill');
+            const currentVolumeEl = popup.querySelector('.current-volume');
+            const volumeText = popup.querySelector('.volume-text');
+            
+            currentVolumeEl.textContent = currentVolume.toFixed(2) + 'L';
+            volumeFill.style.width = (currentVolume / totalVolume * 100) + '%';
+            volumeText.textContent = (currentVolume * 33.814).toFixed(1) + 'oz';
+        }
     }
     
-    // Check for new pours every 2 seconds
+    // Function to finish pour and show completion
+    function finishPour(kegId, kegName, finalVolume) {
+        const popup = document.getElementById('pour-popup-' + kegId);
+        if (popup) {
+            popup.querySelector('.pour-status').textContent = 'Pour Complete!';
+            popup.querySelector('.pour-content').classList.add('complete');
+            
+            // Remove popup after 3 seconds
+            setTimeout(() => {
+                if (popup.parentNode) {
+                    popup.parentNode.removeChild(popup);
+                }
+            }, 3000);
+        }
+    }
+    
+    // Check for active pours every 500ms
     setInterval(() => {
-        fetch('/api/recent-pours')
+        fetch('/api/active-pours')
             .then(response => response.json())
             .then(data => {
-                if (data.pours && data.pours.length > 0) {
-                    data.pours.forEach(pour => {
-                        showPourNotification(pour.keg_name, pour.volume_liters, pour.volume_oz);
+                if (data.active_pours) {
+                    data.active_pours.forEach(pour => {
+                        showPourProgress(pour.keg_id, pour.keg_name, pour.current_volume, pour.total_volume);
+                    });
+                }
+                
+                // Handle completed pours
+                if (data.completed_pours) {
+                    data.completed_pours.forEach(pour => {
+                        finishPour(pour.keg_id, pour.keg_name, pour.final_volume);
                     });
                 }
             })
-            .catch(error => console.log('No recent pours'));
-    }, 2000);
+            .catch(error => console.log('No active pours'));
+    }, 500);
     </script>
 </body>
 </html>
@@ -459,37 +561,64 @@ def flow_update(keg_id):
         session.close()
         return jsonify({'success': False, 'error': 'Database error: %s' % str(e)}), 500
 
-@app.route('/api/recent-pours')
-def recent_pours():
-    """Get recent pour events for notifications."""
+@app.route('/api/active-pours')
+def active_pours():
+    """Get active pour progress for real-time display."""
     try:
         session = SessionLocal()
-        # Get pour events from the last 10 seconds
         from datetime import datetime, timedelta
-        cutoff_time = datetime.utcnow() - timedelta(seconds=10)
+        
+        # Get pour events from the last 30 seconds (active pours)
+        cutoff_time = datetime.utcnow() - timedelta(seconds=30)
         
         recent_events = session.query(PourEvent).filter(
             PourEvent.timestamp >= cutoff_time
         ).order_by(PourEvent.timestamp.desc()).all()
         
-        # Get keg names for the events
-        keg_ids = [event.keg_id for event in recent_events]
-        kegs = session.query(Keg).filter(Keg.id.in_(keg_ids)).all()
-        keg_map = {keg.id: keg.name for keg in kegs}
-        
-        pours = []
+        # Group by keg_id to track progress
+        keg_pours = {}
         for event in recent_events:
-            keg_name = keg_map.get(event.keg_id, 'Unknown Keg')
-            volume_oz = event.volume_dispensed * 33.814  # Convert liters to ounces
-            pours.append({
-                'keg_name': keg_name,
-                'volume_liters': event.volume_dispensed,
-                'volume_oz': volume_oz,
-                'timestamp': event.timestamp.isoformat()
-            })
+            if event.keg_id not in keg_pours:
+                keg_pours[event.keg_id] = []
+            keg_pours[event.keg_id].append(event)
+        
+        # Get keg info
+        keg_ids = list(keg_pours.keys())
+        kegs = session.query(Keg).filter(Keg.id.in_(keg_ids)).all()
+        keg_map = {keg.id: {'name': keg.name, 'total_volume': keg.volume_remaining + sum([e.volume_dispensed for e in keg_pours.get(keg.id, [])])} for keg in kegs}
+        
+        active_pours = []
+        completed_pours = []
+        
+        for keg_id, events in keg_pours.items():
+            if keg_id in keg_map:
+                keg_info = keg_map[keg_id]
+                total_poured = sum([e.volume_dispensed for e in events])
+                current_volume = keg_info['total_volume'] - total_poured
+                
+                # Check if pour is still active (last event within 5 seconds)
+                last_event_time = max([e.timestamp for e in events])
+                is_active = (datetime.utcnow() - last_event_time).total_seconds() < 5
+                
+                if is_active and total_poured > 0:
+                    active_pours.append({
+                        'keg_id': keg_id,
+                        'keg_name': keg_info['name'],
+                        'current_volume': total_poured,
+                        'total_volume': min(total_poured * 2, 0.5)  # Estimate total pour size
+                    })
+                elif not is_active and total_poured > 0:
+                    completed_pours.append({
+                        'keg_id': keg_id,
+                        'keg_name': keg_info['name'],
+                        'final_volume': total_poured
+                    })
         
         session.close()
-        return jsonify({'pours': pours})
+        return jsonify({
+            'active_pours': active_pours,
+            'completed_pours': completed_pours
+        })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
