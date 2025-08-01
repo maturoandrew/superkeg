@@ -80,8 +80,10 @@ Flow Meter Wiring (typical 3-wire):
 
 4. **Start flow monitoring:**
    ```bash
-   python flow_meter_integration.py
+   python3 start_flow_monitoring.py
    ```
+
+📋 **For detailed deployment instructions, see [RASPBERRY_PI_SETUP.md](RASPBERRY_PI_SETUP.md)**
 
 ### Flow Meter Files
 - `flow_meter.py` - Core flow meter tracking module

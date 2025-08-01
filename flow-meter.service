@@ -1,0 +1,26 @@
+[Unit]
+Description=Superkeg Flow Meter Monitoring Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/superkeg
+ExecStart=/usr/bin/python3 /home/pi/superkeg/start_flow_monitoring.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables
+Environment=PYTHONPATH=/home/pi/superkeg
+Environment=FLASK_ENV=production
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
