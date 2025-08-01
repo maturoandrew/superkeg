@@ -78,10 +78,11 @@ Flow Meter Wiring (typical 3-wire):
    - Pour a known volume (e.g., 500ml) through the meter
    - Script will calculate pulses per liter
 
-4. **Start flow monitoring:**
+4. **Start the complete system:**
    ```bash
-   python3 start_flow_monitoring.py
+   python3 start_superkeg.py
    ```
+   This starts both the Flask web app and flow meter monitoring in one command!
 
 📋 **For detailed deployment instructions, see [RASPBERRY_PI_SETUP.md](RASPBERRY_PI_SETUP.md)**
 

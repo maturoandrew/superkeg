@@ -67,17 +67,19 @@ This will:
 - Help you calibrate the flow meter
 - Save calibration settings
 
-### 4. Test Integration
+### 4. Test Complete System
 
 ```bash
-# Test the full integration (without service)
-python3 start_flow_monitoring.py
+# Test the complete system (Flask + Flow Monitoring)
+python3 start_superkeg.py
 ```
 
-This should:
+This will:
+- Start the Flask web application
+- Start flow meter monitoring
 - Detect any tapped kegs
-- Start monitoring flow meters
 - Log pour events to your database
+- Provide web interface at http://your-pi-ip:5000
 
 ## Running as a Service (Optional)
 
@@ -87,32 +89,32 @@ To have flow monitoring start automatically on boot:
 
 ```bash
 # Copy service file
-sudo cp flow-meter.service /etc/systemd/system/
+sudo cp superkeg.service /etc/systemd/system/
 
 # Reload systemd
 sudo systemctl daemon-reload
 
 # Enable service to start on boot
-sudo systemctl enable flow-meter.service
+sudo systemctl enable superkeg.service
 ```
 
 ### 2. Service Management
 
 ```bash
 # Start the service
-sudo systemctl start flow-meter.service
+sudo systemctl start superkeg.service
 
 # Check service status
-sudo systemctl status flow-meter.service
+sudo systemctl status superkeg.service
 
 # View logs
-sudo journalctl -u flow-meter.service -f
+sudo journalctl -u superkeg.service -f
 
 # Stop the service
-sudo systemctl stop flow-meter.service
+sudo systemctl stop superkeg.service
 
 # Disable auto-start
-sudo systemctl disable flow-meter.service
+sudo systemctl disable superkeg.service
 ```
 
 ## Configuration
@@ -170,22 +172,19 @@ meter.cleanup()
 
 ### 3. Full Integration Test
 
-1. **Make sure Flask app is running:**
+1. **Start the complete system:**
    ```bash
-   python3 app.py
+   python3 start_superkeg.py
    ```
 
 2. **Tap a keg in the web interface** (http://your-pi-ip:5000/manage)
 
-3. **Start flow monitoring:**
-   ```bash
-   python3 start_flow_monitoring.py
-   ```
-
-4. **Pour beer and check:**
+3. **Pour beer and check:**
    - Watch console logs for pour detection
    - Check web interface for volume updates
    - Check pour history page
+
+The single script handles both Flask and flow monitoring automatically!
 
 ## Troubleshooting
 
