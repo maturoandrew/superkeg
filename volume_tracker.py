@@ -62,7 +62,7 @@ class VolumeTracker(object):
                     'final_volume': pour_data['volume']
                 })
                 kegs_to_remove.append(keg_id)
-                logger.info("Auto-completed pour for keg %d after 5s timeout" % keg_id)
+                logger.info("Pour completed for keg %d (%.1fml total)" % (keg_id, pour_data['volume'] * 1000))
             else:
                 active_pours.append({
                     'keg_id': keg_id,
