@@ -33,10 +33,10 @@ def test_gpio_connection(gpio_pin: int = 18):
         print(f"\nTest complete. Total pulses detected: {total_pulses}")
         
         if total_pulses > 0:
-            print("✓ Flow meter is connected and working!")
+            print("[OK] Flow meter is connected and working!")
             return True
         else:
-            print("✗ No pulses detected. Check connections:")
+            print("[ERROR] No pulses detected. Check connections:")
             print("  - VCC to 5V (or 3.3V)")
             print("  - GND to GND")
             print(f"  - Signal to GPIO {gpio_pin}")
@@ -82,7 +82,7 @@ def interactive_calibration(gpio_pin: int = 18):
     
     try:
         flow_meter.start_monitoring()
-        print(f"\n🚰 Pour exactly {volume_ml}ml through the flow meter now...")
+        print("\n[POUR] Pour exactly %sml through the flow meter now..." % volume_ml)
         print("Press Enter when finished pouring.")
         
         start_pulses = flow_meter.pulse_count
@@ -94,10 +94,10 @@ def interactive_calibration(gpio_pin: int = 18):
         if calibration_pulses > 0:
             pulses_per_liter = calibration_pulses / volume_liters
             
-            print(f"\n✓ Calibration successful!")
-            print(f"  Pulses detected: {calibration_pulses}")
-            print(f"  Volume poured: {volume_liters}L")
-            print(f"  Calculated: {pulses_per_liter:.2f} pulses/L")
+            print("\n[OK] Calibration successful!")
+            print("  Pulses detected: %d" % calibration_pulses)
+            print("  Volume poured: %.3fL" % volume_liters)
+            print("  Calculated: %.2f pulses/L" % pulses_per_liter)
             
             # Save calibration
             flow_meter.pulses_per_liter = pulses_per_liter
@@ -107,7 +107,7 @@ def interactive_calibration(gpio_pin: int = 18):
             
             return pulses_per_liter
         else:
-            print("✗ No pulses detected during calibration.")
+            print("[ERROR] No pulses detected during calibration.")
             print("Check your connections and try again.")
             return None
             

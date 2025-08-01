@@ -71,10 +71,10 @@ class SuperkegManager(object):
             time.sleep(3)
             
             if self.flask_process.poll() is None:
-                logger.info("✓ Flask app started successfully")
+                logger.info("[OK] Flask app started successfully")
                 return True
             else:
-                logger.error("✗ Flask app failed to start")
+                logger.error("[ERROR] Flask app failed to start")
                 return False
                 
         except Exception as e:
@@ -128,7 +128,7 @@ class SuperkegManager(object):
             flow_thread.daemon = True
             flow_thread.start()
             
-            logger.info("✓ Flow meter monitoring started")
+            logger.info("[OK] Flow meter monitoring started")
             return True
             
         except Exception as e:
@@ -204,12 +204,12 @@ class SuperkegManager(object):
         try:
             import flask
             import sqlalchemy
-            logger.info("✓ Required Python modules available")
+            logger.info("[OK] Required Python modules available")
         except ImportError as e:
             logger.error("Missing Python module: %s" % str(e))
             return False
         
-        logger.info("✓ All prerequisites met")
+        logger.info("[OK] All prerequisites met")
         return True
     
     def wait_for_flask_ready(self, timeout=30):
@@ -225,7 +225,7 @@ class SuperkegManager(object):
             try:
                 response = requests.get('http://localhost:5000/', timeout=2)
                 if response.status_code == 200:
-                    logger.info("✓ Flask app is ready and responding")
+                    logger.info("[OK] Flask app is ready and responding")
                     return True
             except:
                 pass
@@ -273,7 +273,7 @@ class SuperkegManager(object):
         if hasattr(self, 'flow_system'):
             try:
                 self.flow_system.stop_all()
-                logger.info("✓ Flow monitoring stopped")
+                logger.info("[OK] Flow monitoring stopped")
             except:
                 pass
         
@@ -282,11 +282,11 @@ class SuperkegManager(object):
             try:
                 self.flask_process.terminate()
                 self.flask_process.wait()
-                logger.info("✓ Flask app stopped")
+                logger.info("[OK] Flask app stopped")
             except:
                 try:
                     self.flask_process.kill()
-                    logger.info("✓ Flask app force stopped")
+                    logger.info("[OK] Flask app force stopped")
                 except:
                     pass
         
