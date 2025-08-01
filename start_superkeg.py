@@ -121,6 +121,10 @@ class SuperkegManager(object):
             # Create flow system
             self.flow_system = MultiTapFlowSystem(tap_configs)
             
+            # Set global flow system instance for API access
+            import app
+            app.flow_system = self.flow_system
+            
             # Start monitoring in a separate thread
             flow_thread = threading.Thread(
                 target=self._run_flow_monitoring

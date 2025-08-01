@@ -333,15 +333,19 @@ class KegFlowTracker(object):
                     volume_poured_ml = volume_poured * 1000
                     
                     if volume_poured_ml >= self.pour_threshold_ml:
-                        # Log the pour event
+                        # Call finish callback for active pour tracking
+                        if hasattr(self, 'finish_pour_callback') and self.finish_pour_callback:
+                            self.finish_pour_callback(self.keg_id, volume_poured)
+                        
+                        # Log the pour event to database
                         if self.log_pour_callback:
                             self.log_pour_callback(self.keg_id, volume_poured)
                         
-                        # Update keg volume
+                        # Update keg volume in database
                         if self.update_keg_callback:
                             self.update_keg_callback(self.keg_id, volume_poured)
                         
-                        logger.info("Pour logged: %.1fml for keg %d" % (volume_poured_ml, self.keg_id))
+                        logger.info("Pour finished and logged: %.1fml for keg %d" % (volume_poured_ml, self.keg_id))
                     
                     # Reset pour tracking
                     self.is_pouring = False

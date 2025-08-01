@@ -8,6 +8,9 @@ from datetime import datetime
 
 app = Flask(__name__)
 
+# Global flow system instance for API access
+flow_system = None
+
 # Add dark mode CSS and toggle to all templates
 DARK_MODE_HEAD = '''
 <style id="dark-mode-style">
@@ -565,6 +568,15 @@ def flow_update(keg_id):
 def active_pours():
     """Get active pour progress for real-time display."""
     try:
+        # Try to get active pours from flow system if available
+        if flow_system and hasattr(flow_system, 'get_active_pours'):
+            active_pours, completed_pours = flow_system.get_active_pours()
+            return jsonify({
+                'active_pours': active_pours,
+                'completed_pours': completed_pours
+            })
+        
+        # Fallback to database approach
         session = SessionLocal()
         from datetime import datetime, timedelta
         

@@ -101,6 +101,7 @@ class MultiTapFlowSystem(object):
                 'total_volume': 0,
                 'last_update': datetime.utcnow()
             }
+            logger.info("Pour started - Keg %d" % keg_id)
         
         self.active_pours[keg_id]['total_volume'] += volume_liters
         self.active_pours[keg_id]['last_update'] = datetime.utcnow()
@@ -218,6 +219,7 @@ class MultiTapFlowSystem(object):
             tracker.update_keg_callback = self._update_keg_volume_api
             tracker.log_pour_callback = lambda kid, vol: None  # API handles both update and logging
             tracker.active_pour_callback = self._track_active_pour  # Track active pours
+            tracker.finish_pour_callback = self._finish_active_pour  # Mark pour as finished
             
             # Store tracker
             self.flow_trackers[tap_number] = tracker
