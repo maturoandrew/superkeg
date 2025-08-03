@@ -63,6 +63,7 @@ template = '''
 <head>
     <title>Keg Manager</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    ''' + DARK_MODE_HEAD + '''
     <style>
         .keg-grid { 
             display: grid; 
@@ -201,7 +202,6 @@ template = '''
                         </div>
                         <div class="volume-text">${(currentVolume * 33.814).toFixed(1)}oz</div>
                     </div>
-                    <div class="pour-status">Pouring...</div>
                 </div>
             `;
             document.body.appendChild(popup);
@@ -221,7 +221,6 @@ template = '''
     function finishPour(kegId, kegName, finalVolume) {
         const popup = document.getElementById('pour-popup-' + kegId);
         if (popup) {
-            popup.querySelector('.pour-status').textContent = 'Pour Complete!';
             popup.querySelector('.pour-content').classList.add('complete');
             
             // Remove popup after 2 seconds
@@ -347,15 +346,31 @@ display_template = '''
     <title>Currently Tapped Kegs</title>
     <meta http-equiv="refresh" content="10">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    ''' + DARK_MODE_HEAD + '''
     <style>
         body { font-size: 1.5rem; }
-        .keg-row { display: flex; flex-wrap: nowrap; justify-content: center; }
-        .keg-card { flex: 1 1 0; max-width: 25%; min-width: 220px; margin: 0 1rem; }
+        .keg-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            grid-template-rows: 1fr 1fr;
+            gap: 20px; 
+            height: calc(100vh - 200px);
+            max-height: 800px;
+        }
+        .keg-card { 
+            display: flex; 
+            flex-direction: column;
+            min-height: 300px;
+            margin: 0;
+        }
         .low-volume { border: 3px solid #dc3545 !important; box-shadow: 0 0 10px #dc3545; }
-        .tap-label { font-weight: bold; font-size: 1.2rem; color: #0d6efd; text-align: center; margin-bottom: 0.5rem; }
+        .tap-label { font-weight: bold; font-size: 1.5rem; color: #0d6efd; text-align: center; margin-bottom: 1rem; }
         @media (max-width: 900px) {
-            .keg-row { flex-wrap: wrap; }
-            .keg-card { max-width: 100%; margin: 1rem 0; }
+            .keg-grid { 
+                grid-template-columns: 1fr; 
+                grid-template-rows: auto;
+            }
+            .keg-card { margin: 1rem 0; }
         }
     </style>
 </head>
@@ -390,6 +405,7 @@ edit_keg_template = '''
 <head>
     <title>Edit Keg</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    ''' + DARK_MODE_HEAD + '''
 </head>
 <body class="container py-4">
     <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">Dark Mode</button>
@@ -414,6 +430,7 @@ history_template = '''
 <head>
     <title>Pour History</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    ''' + DARK_MODE_HEAD + '''
 </head>
 <body class="container py-4">
     <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">Dark Mode</button>
