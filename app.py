@@ -56,10 +56,22 @@ template = '''
     <title>Keg Manager</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <style>
-        .keg-row { display: flex; flex-wrap: nowrap; justify-content: center; }
-        .keg-card { flex: 1 1 0; max-width: 25%; min-width: 220px; margin: 0 1rem; }
+        .keg-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            grid-template-rows: 1fr 1fr;
+            gap: 20px; 
+            height: calc(100vh - 200px);
+            max-height: 800px;
+        }
+        .keg-card { 
+            display: flex; 
+            flex-direction: column;
+            min-height: 300px;
+            margin: 0;
+        }
         .low-volume { border: 3px solid #dc3545 !important; box-shadow: 0 0 10px #dc3545; }
-        .tap-label { font-weight: bold; font-size: 1.2rem; color: #0d6efd; text-align: center; margin-bottom: 0.5rem; }
+        .tap-label { font-weight: bold; font-size: 1.5rem; color: #0d6efd; text-align: center; margin-bottom: 1rem; }
         .pour-popup { 
             position: fixed; 
             top: 0; 
@@ -74,31 +86,31 @@ template = '''
         }
         .pour-content { 
             background: white; 
-            padding: 40px; 
-            border-radius: 15px; 
+            padding: 60px; 
+            border-radius: 20px; 
             text-align: center; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
-            max-width: 500px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3); 
+            max-width: 800px; 
             width: 90%; 
         }
         .pour-content h2 { 
             color: #28a745; 
-            margin-bottom: 10px; 
-            font-size: 2rem; 
+            margin-bottom: 15px; 
+            font-size: 3rem; 
         }
         .pour-content h3 { 
             color: #333; 
-            margin-bottom: 20px; 
-            font-size: 1.5rem; 
+            margin-bottom: 30px; 
+            font-size: 2rem; 
         }
         .volume-display { 
             margin: 20px 0; 
         }
         .current-volume { 
-            font-size: 3rem; 
+            font-size: 4.5rem; 
             font-weight: bold; 
             color: #007bff; 
-            margin-bottom: 10px; 
+            margin-bottom: 15px; 
         }
         .volume-bar { 
             width: 100%; 
@@ -136,7 +148,7 @@ template = '''
     <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">Dark Mode</button>
     <h1>Currently Tapped Kegs</h1>
     <a href="/manage" class="btn btn-primary mb-4">Keg Management</a>
-    <div class="keg-row">
+    <div class="keg-grid">
     {% for keg in kegs %}
         <div class="card keg-card {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}low-volume{% endif %}">
             <div class="tap-label">Tap {{ keg.tap_position }}</div>
@@ -340,7 +352,7 @@ display_template = '''
     <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">Dark Mode</button>
     <h1>Currently Tapped Kegs</h1>
     <a href="/manage" class="btn btn-secondary mb-4">Keg Management</a>
-    <div class="keg-row">
+    <div class="keg-grid">
     {% for keg in kegs %}
         <div class="card keg-card {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}low-volume{% endif %}">
             <div class="tap-label">Tap {{ keg.tap_position }}</div>
