@@ -265,6 +265,8 @@ management_template = '''
 <head>
     <title>Keg Management</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    ''' + DARK_MODE_HEAD + '''
     <script>
     function confirmDelete(kegId) {
         if (confirm('Are you sure you want to permanently delete this keg?')) {
@@ -316,10 +318,30 @@ management_template = '''
             <td>
                 {% if keg.status == keg_status.UNTAPPED %}
                     <a href="/edit/{{ keg.id }}" class="btn btn-info btn-sm">Edit</a>
-                    <a href="/tap_new/{{ keg.id }}" class="btn btn-success btn-sm">Tap New</a>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            Tap New
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/tap_new/{{ keg.id }}/1">Tap 1</a></li>
+                            <li><a class="dropdown-item" href="/tap_new/{{ keg.id }}/2">Tap 2</a></li>
+                            <li><a class="dropdown-item" href="/tap_new/{{ keg.id }}/3">Tap 3</a></li>
+                            <li><a class="dropdown-item" href="/tap_new/{{ keg.id }}/4">Tap 4</a></li>
+                        </ul>
+                    </div>
                 {% elif keg.status == keg_status.OFF_TAP %}
                     <a href="/edit/{{ keg.id }}" class="btn btn-info btn-sm">Edit</a>
-                    <a href="/tap_previous/{{ keg.id }}" class="btn btn-warning btn-sm">Tap Again</a>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-warning btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            Tap Again
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/tap_previous/{{ keg.id }}/1">Tap 1</a></li>
+                            <li><a class="dropdown-item" href="/tap_previous/{{ keg.id }}/2">Tap 2</a></li>
+                            <li><a class="dropdown-item" href="/tap_previous/{{ keg.id }}/3">Tap 3</a></li>
+                            <li><a class="dropdown-item" href="/tap_previous/{{ keg.id }}/4">Tap 4</a></li>
+                        </ul>
+                    </div>
                 {% elif keg.status == keg_status.TAPPED %}
                     <a href="/edit/{{ keg.id }}" class="btn btn-info btn-sm">Edit</a>
                     <a href="/off_tap/{{ keg.id }}" class="btn btn-danger btn-sm">Take Off Tap</a>
@@ -530,10 +552,50 @@ def tap_new(keg_id):
     session.close()
     return redirect(url_for("manage"))
 
+@app.route("/tap_new/<int:keg_id>/<int:tap_position>")
+def tap_new_with_position(keg_id, tap_position):
+    session = SessionLocal()
+    # Check if tap position is available
+    existing_keg = session.query(Keg).filter(Keg.status == KegStatus.TAPPED, Keg.tap_position == tap_position).first()
+    if existing_keg:
+        session.close()
+        return redirect(url_for("manage"))  # Tap position already in use
+    
+    # Tap the keg with specified position
+    keg = session.query(Keg).filter(Keg.id == keg_id).first()
+    if keg and keg.status == KegStatus.UNTAPPED:
+        keg.status = KegStatus.TAPPED
+        keg.tap_position = tap_position
+        keg.date_last_tapped = datetime.utcnow()
+        session.commit()
+    
+    session.close()
+    return redirect(url_for("manage"))
+
 @app.route("/tap_previous/<int:keg_id>")
 def tap_previous(keg_id):
     session = SessionLocal()
     tap_previous_keg(session, keg_id)
+    session.close()
+    return redirect(url_for("manage"))
+
+@app.route("/tap_previous/<int:keg_id>/<int:tap_position>")
+def tap_previous_with_position(keg_id, tap_position):
+    session = SessionLocal()
+    # Check if tap position is available
+    existing_keg = session.query(Keg).filter(Keg.status == KegStatus.TAPPED, Keg.tap_position == tap_position).first()
+    if existing_keg:
+        session.close()
+        return redirect(url_for("manage"))  # Tap position already in use
+    
+    # Tap the keg with specified position
+    keg = session.query(Keg).filter(Keg.id == keg_id).first()
+    if keg and keg.status == KegStatus.OFF_TAP:
+        keg.status = KegStatus.TAPPED
+        keg.tap_position = tap_position
+        keg.date_last_tapped = datetime.utcnow()
+        session.commit()
+    
     session.close()
     return redirect(url_for("manage"))
 
