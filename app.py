@@ -495,20 +495,26 @@ def get_cheers_message():
 def get_pour_comment(volume_oz):
     if volume_oz < 5:
         sample_messages = [
+            "Oh nice choice!",
             "Oh, just a sample?",
             "Tasting flight size!",
             "Just a little sip?",
             "Keeping it light!",
-            "Sample size pour!"
+            "Sample size pour!",
+            "Smart choice!",
+            "Good call!"
         ]
         return random.choice(sample_messages)
     elif volume_oz > 12:
         generous_messages = [
+            "Oh wow look at this big boi!",
             "Now that's a generous pour!",
             "Going big!",
             "That's a proper pint!",
             "Living large!",
-            "Now we're talking!"
+            "Now we're talking!",
+            "Big pour energy!",
+            "That's the spirit!"
         ]
         return random.choice(generous_messages)
     else:
