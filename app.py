@@ -171,6 +171,7 @@ template = '''
     <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">Dark Mode</button>
     <h1>Currently Tapped Kegs</h1>
     <a href="/manage" class="btn btn-primary mb-4">Keg Management</a>
+
     <div class="keg-grid">
     {% for keg in kegs %}
         <div class="card keg-card {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}low-volume{% endif %}">
@@ -191,6 +192,8 @@ template = '''
     
     <script>
     let activePours = new Map(); // Track active pours by keg_id
+    
+
     
     // Function to show big pour progress popup
     function showPourProgress(kegId, kegName, currentVolume, totalVolume, pourComment = '') {
@@ -728,7 +731,16 @@ def active_pours():
     try:
         # Try to get active pours from volume tracker first
         if hasattr(app, 'latest_volume_data') and app.latest_volume_data:
-            data = app.latest_volume_data
+            data = app.latest_volume_data.copy()  # Make a copy to modify
+            
+            # Add pour comments to active pours if they don't have them
+            if 'active_pours' in data:
+                for pour in data['active_pours']:
+                    if 'pour_comment' not in pour:
+                        # Generate pour comment based on current volume
+                        volume_oz = pour.get('current_volume', 0) * 33.814
+                        pour['pour_comment'] = get_pour_comment(volume_oz)
+            
             active_count = len(data.get('active_pours', []))
             completed_count = len(data.get('completed_pours', []))
             print("API returning - Active: %d, Completed: %d" % (active_count, completed_count))
