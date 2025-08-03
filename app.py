@@ -28,6 +28,14 @@ DARK_MODE_HEAD = '''
 [data-theme='dark'] .card { background: var(--bs-card-bg) !important; color: var(--bs-card-color) !important; border-color: var(--bs-border-color) !important; }
 [data-theme='dark'] .table { color: var(--bs-body-color) !important; }
 [data-theme='dark'] .btn { color: #fff !important; }
+[data-theme='dark'] .keg-grid { background: var(--bs-body-bg) !important; }
+[data-theme='dark'] .pour-content { background: #23272b !important; color: #f8f9fa !important; }
+[data-theme='dark'] .pour-content h2 { color: #28a745 !important; }
+[data-theme='dark'] .pour-content h3 { color: #f8f9fa !important; }
+[data-theme='dark'] .current-volume { color: #007bff !important; }
+[data-theme='dark'] .volume-text { color: #adb5bd !important; }
+[data-theme='dark'] .pour-status { color: #28a745 !important; }
+[data-theme='dark'] .pour-content.complete .pour-status { color: #007bff !important; }
 </style>
 <script>
 function setTheme(theme) {
@@ -139,8 +147,11 @@ template = '''
             color: #007bff; 
         }
         @media (max-width: 900px) {
-            .keg-row { flex-wrap: wrap; }
-            .keg-card { max-width: 100%; margin: 1rem 0; }
+            .keg-grid { 
+                grid-template-columns: 1fr; 
+                grid-template-rows: auto;
+            }
+            .keg-card { margin: 1rem 0; }
         }
     </style>
 </head>
@@ -148,7 +159,6 @@ template = '''
     <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">Dark Mode</button>
     <h1>Currently Tapped Kegs</h1>
     <a href="/manage" class="btn btn-primary mb-4">Keg Management</a>
-    <button class="btn btn-warning mb-4 ms-2" onclick="testPourPopup()">Test Pour Popup</button>
     <div class="keg-grid">
     {% for keg in kegs %}
         <div class="card keg-card {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}low-volume{% endif %}">
@@ -245,14 +255,6 @@ template = '''
             })
             .catch(error => console.log('No active pours'));
     }, 500);
-    
-    // Test function to verify popup system
-    function testPourPopup() {
-        showPourProgress(1, 'Test Beer', 0.15, 0.3);
-        setTimeout(() => {
-            finishPour(1, 'Test Beer', 0.15);
-        }, 3000);
-    }
     </script>
 </body>
 </html>
