@@ -36,6 +36,9 @@ DARK_MODE_HEAD = '''
 [data-theme='dark'] .volume-text { color: #adb5bd !important; }
 [data-theme='dark'] .pour-status { color: #28a745 !important; }
 [data-theme='dark'] .pour-content.complete .pour-status { color: #007bff !important; }
+[data-theme='dark'] .form-control { background: #23272b !important; color: #f8f9fa !important; border-color: #444 !important; }
+[data-theme='dark'] .form-control:focus { background: #2c3034 !important; color: #f8f9fa !important; border-color: #0d6efd !important; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important; }
+[data-theme='dark'] .form-control::placeholder { color: #adb5bd !important; }
 </style>
 <script>
 function setTheme(theme) {
