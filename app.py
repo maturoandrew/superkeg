@@ -39,6 +39,7 @@ DARK_MODE_HEAD = '''
 [data-theme='dark'] .form-control { background: #23272b !important; color: #f8f9fa !important; border-color: #444 !important; }
 [data-theme='dark'] .form-control:focus { background: #2c3034 !important; color: #f8f9fa !important; border-color: #0d6efd !important; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important; }
 [data-theme='dark'] .form-control::placeholder { color: #adb5bd !important; }
+[data-theme='dark'] .pour-comment { color: #ff8c42 !important; }
 </style>
 <script>
 function setTheme(theme) {
@@ -150,6 +151,13 @@ template = '''
         .pour-content.complete .pour-status { 
             color: #007bff; 
         }
+        .pour-comment { 
+            font-size: 1.4rem; 
+            color: #ff6b35; 
+            margin-top: 15px; 
+            font-weight: bold; 
+            font-style: italic; 
+        }
         @media (max-width: 900px) {
             .keg-grid { 
                 grid-template-columns: 1fr; 
@@ -185,7 +193,7 @@ template = '''
     let activePours = new Map(); // Track active pours by keg_id
     
     // Function to show big pour progress popup
-    function showPourProgress(kegId, kegName, currentVolume, totalVolume) {
+    function showPourProgress(kegId, kegName, currentVolume, totalVolume, pourComment = '') {
         let popup = document.getElementById('pour-popup-' + kegId);
         
         if (!popup) {
@@ -205,6 +213,7 @@ template = '''
                         </div>
                         <div class="volume-text">${(currentVolume * 33.814).toFixed(1)}oz</div>
                     </div>
+                    ${pourComment ? `<div class="pour-comment">${pourComment}</div>` : ''}
                 </div>
             `;
             document.body.appendChild(popup);
@@ -213,10 +222,22 @@ template = '''
             const volumeFill = popup.querySelector('.volume-fill');
             const currentVolumeEl = popup.querySelector('.current-volume');
             const volumeText = popup.querySelector('.volume-text');
+            const pourCommentEl = popup.querySelector('.pour-comment');
             
             currentVolumeEl.textContent = currentVolume.toFixed(2) + 'L';
             volumeFill.style.width = (currentVolume / totalVolume * 100) + '%';
             volumeText.textContent = (currentVolume * 33.814).toFixed(1) + 'oz';
+            
+            // Update comment if provided
+            if (pourComment && pourCommentEl) {
+                pourCommentEl.textContent = pourComment;
+            } else if (pourComment && !pourCommentEl) {
+                // Add comment element if it doesn't exist
+                const commentDiv = document.createElement('div');
+                commentDiv.className = 'pour-comment';
+                commentDiv.textContent = pourComment;
+                popup.querySelector('.pour-content').appendChild(commentDiv);
+            }
         }
     }
     
@@ -244,7 +265,7 @@ template = '''
             .then(data => {
                 if (data.active_pours) {
                     data.active_pours.forEach(pour => {
-                        showPourProgress(pour.keg_id, pour.keg_name, pour.current_volume, pour.total_volume);
+                        showPourProgress(pour.keg_id, pour.keg_name, pour.current_volume, pour.total_volume, pour.pour_comment || '');
                     });
                 }
                 
@@ -502,7 +523,11 @@ def get_pour_comment(volume_oz):
             "Keeping it light!",
             "Sample size pour!",
             "Smart choice!",
-            "Good call!"
+            "Good call!",
+            "Taste test mode!",
+            "Just a wee dram!",
+            "Sip and savor!",
+            "Taster's choice!"
         ]
         return random.choice(sample_messages)
     elif volume_oz > 12:
@@ -514,11 +539,27 @@ def get_pour_comment(volume_oz):
             "Living large!",
             "Now we're talking!",
             "Big pour energy!",
-            "That's the spirit!"
+            "That's the spirit!",
+            "Thirsty much? 😄",
+            "Going all in!",
+            "That's a serious pour!",
+            "Commitment level: 100%!"
         ]
         return random.choice(generous_messages)
     else:
-        return ""
+        standard_messages = [
+            "Perfect pour!",
+            "Cheers to that!",
+            "Looking good!",
+            "Nice choice!",
+            "That's the way!",
+            "Solid pour!",
+            "Classic size!",
+            "Just right!",
+            "Goldilocks pour!",
+            "Balanced approach!"
+        ]
+        return random.choice(standard_messages)
 
 def is_low_volume(keg):
     orig = getattr(keg, 'original_volume', None)
@@ -737,11 +778,16 @@ def active_pours():
                 is_active = (datetime.utcnow() - last_event_time).total_seconds() < 3
                 
                 if is_active and total_poured > 0:
+                    # Generate pour comment based on total poured volume
+                    volume_oz = total_poured * 33.814  # Convert liters to ounces
+                    pour_comment = get_pour_comment(volume_oz)
+                    
                     active_pours.append({
                         'keg_id': keg_id,
                         'keg_name': keg_name,
                         'current_volume': total_poured,
-                        'total_volume': min(total_poured * 2, 0.5)  # Estimate total pour size
+                        'total_volume': min(total_poured * 2, 0.5),  # Estimate total pour size
+                        'pour_comment': pour_comment
                     })
                 elif not is_active and total_poured > 0:
                     completed_pours.append({
