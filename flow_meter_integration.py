@@ -48,6 +48,15 @@ class MultiTapFlowSystem(object):
         self.running = False
         self.active_pours = {}  # Track active pours by keg_id
         
+        # Initialize volume tracker
+        try:
+            from volume_tracker import volume_tracker
+            self.volume_tracker = volume_tracker
+            logger.info("Volume tracker initialized")
+        except ImportError:
+            self.volume_tracker = None
+            logger.warning("Volume tracker not available")
+        
         # Setup signal handlers for clean shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -106,14 +115,13 @@ class MultiTapFlowSystem(object):
             logger.error("Error getting keg name: %s" % str(e))
         
         # Use volume tracker if available
-        try:
-            from volume_tracker import volume_tracker
+        if self.volume_tracker:
             if keg_id not in self.active_pours:
-                volume_tracker.start_pour(keg_id, keg_name)
+                self.volume_tracker.start_pour(keg_id, keg_name)
                 logger.info("Pour started - Keg %d (%s)" % (keg_id, keg_name))
             
-            volume_tracker.update_pour_volume(keg_id, volume_liters)
-        except ImportError:
+            self.volume_tracker.update_pour_volume(keg_id, volume_liters)
+        else:
             # Fallback to local tracking
             if keg_id not in self.active_pours:
                 self.active_pours[keg_id] = {
@@ -131,10 +139,9 @@ class MultiTapFlowSystem(object):
     def _finish_active_pour(self, keg_id, volume_liters=None):
         """Mark active pour as finished."""
         # Use volume tracker if available
-        try:
-            from volume_tracker import volume_tracker
-            volume_tracker.finish_pour(keg_id)
-        except ImportError:
+        if self.volume_tracker:
+            self.volume_tracker.finish_pour(keg_id)
+        else:
             # Fallback to local tracking
             if keg_id in self.active_pours:
                 total_volume = self.active_pours[keg_id]['total_volume']

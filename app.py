@@ -148,6 +148,7 @@ template = '''
     <button id="theme-toggle" class="btn btn-outline-secondary float-end mb-2" onclick="toggleTheme()">Dark Mode</button>
     <h1>Currently Tapped Kegs</h1>
     <a href="/manage" class="btn btn-primary mb-4">Keg Management</a>
+    <button class="btn btn-warning mb-4 ms-2" onclick="testPourPopup()">Test Pour Popup</button>
     <div class="keg-grid">
     {% for keg in kegs %}
         <div class="card keg-card {% if keg.volume_remaining < 0.1 * (keg.original_volume or keg.volume_remaining) %}low-volume{% endif %}">
@@ -244,6 +245,14 @@ template = '''
             })
             .catch(error => console.log('No active pours'));
     }, 500);
+    
+    // Test function to verify popup system
+    function testPourPopup() {
+        showPourProgress(1, 'Test Beer', 0.15, 0.3);
+        setTimeout(() => {
+            finishPour(1, 'Test Beer', 0.15);
+        }, 3000);
+    }
     </script>
 </body>
 </html>

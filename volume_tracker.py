@@ -110,6 +110,19 @@ class VolumeTracker(object):
         self.update_thread.daemon = True
         self.update_thread.start()
         logger.info("Volume tracker started")
+        
+        # Send initial empty update to test connection
+        try:
+            url = "%s/api/volume-update" % self.flask_base_url
+            data = {
+                'active_pours': [],
+                'completed_pours': [],
+                'timestamp': datetime.utcnow().isoformat()
+            }
+            response = requests.post(url, json=data, timeout=1)
+            logger.info("Volume tracker connection test: %d" % response.status_code)
+        except Exception as e:
+            logger.error("Volume tracker connection test failed: %s" % str(e))
     
     def stop(self):
         """Stop the volume tracker."""
