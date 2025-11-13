@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Flow Meter Setup and Test Script
 Simple script to test flow meter connectivity and perform initial calibration.

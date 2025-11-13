@@ -40,6 +40,12 @@ Superkeg is a Python application for managing and monitoring beer kegs, designed
 - (Optional) Add undo/soft-delete for kegs
 - (Optional) Add notifications/alerts for low volume or empty kegs
 - (Optional) Add user authentication for admin actions
+- (Optional) Set up iPad as dedicated display:
+  - Open Safari to http://[pi-ip]:5000/display
+  - Enable Guided Access (Settings → Accessibility → Guided Access)
+  - Disable auto-lock (Settings → Display & Brightness → Auto-Lock → Never)
+  - Keep iPad plugged in permanently
+  - Triple-click home button to lock iPad to Safari
 
 ## Flow Meter Integration
 
