@@ -59,13 +59,13 @@ def interactive_calibration(gpio_pin=18):
     print("  - A measuring cup (500ml or 1L recommended)")
     print("  - Water or another liquid")
     print("  - The flow meter installed in your system")
-    
-    input("\nPress Enter when ready to start...")
+
+    raw_input("\nPress Enter when ready to start...")
     
     # Get known volume
     while True:
         try:
-            volume_ml = float(input("\nEnter the volume you'll pour (in ml): "))
+            volume_ml = float(raw_input("\nEnter the volume you'll pour (in ml): "))
             if volume_ml > 0:
                 break
             print("Please enter a positive volume.")
@@ -85,9 +85,9 @@ def interactive_calibration(gpio_pin=18):
         flow_meter.start_monitoring()
         print("\n[POUR] Pour exactly %sml through the flow meter now..." % volume_ml)
         print("Press Enter when finished pouring.")
-        
+
         start_pulses = flow_meter.pulse_count
-        input()
+        raw_input()
         end_pulses = flow_meter.pulse_count
         
         calibration_pulses = end_pulses - start_pulses
