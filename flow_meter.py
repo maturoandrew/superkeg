@@ -78,7 +78,7 @@ class FlowMeter(object):
         
         # Threading
         self.monitor_thread = None
-        self.stop_monitoring = threading.Event()
+        self._stop_event = threading.Event()
         
         # Setup GPIO if available
         if GPIO_AVAILABLE:
@@ -143,7 +143,7 @@ class FlowMeter(object):
         
         self.is_monitoring = True
         self.start_time = time.time()
-        self.stop_monitoring.clear()
+        self._stop_event.clear()
         
         if GPIO_AVAILABLE:
             # Add interrupt for rising edge
@@ -165,9 +165,9 @@ class FlowMeter(object):
         """Stop monitoring flow meter pulses."""
         if not self.is_monitoring:
             return
-        
+
         self.is_monitoring = False
-        self.stop_monitoring.set()
+        self._stop_event.set()
         
         if GPIO_AVAILABLE:
             GPIO.remove_event_detect(self.gpio_pin)
@@ -181,8 +181,8 @@ class FlowMeter(object):
         """Simulate flow meter pulses for testing without GPIO."""
         logger.info("Running flow meter simulation (for testing)")
         pulse_interval = 0.1  # 10 Hz simulation
-        
-        while not self.stop_monitoring.is_set():
+
+        while not self._stop_event.is_set():
             # Simulate a pulse every 100ms when "flowing"
             if time.time() % 5 < 2:  # "Flow" for 2 seconds every 5 seconds
                 self._pulse_detected(self.gpio_pin)
@@ -295,7 +295,7 @@ class KegFlowTracker(object):
         # Threading for pour detection
         self.monitor_thread = threading.Thread(target=self._monitor_pour_events)
         self.monitor_thread.daemon = True
-        self.stop_monitoring = threading.Event()
+        self._stop_event = threading.Event()
     
     def _on_volume_change(self, total_volume_liters):
         """Called when flow meter detects volume change."""
@@ -323,7 +323,7 @@ class KegFlowTracker(object):
     
     def _monitor_pour_events(self):
         """Monitor for pour events and log them."""
-        while not self.stop_monitoring.is_set():
+        while not self._stop_event.is_set():
             if self.is_pouring:
                 current_time = time.time()
                 
@@ -356,7 +356,7 @@ class KegFlowTracker(object):
     def start_tracking(self):
         """Start tracking flow for this keg."""
         self.flow_meter.start_monitoring()
-        self.stop_monitoring.clear()
+        self._stop_event.clear()
         self.monitor_thread = threading.Thread(target=self._monitor_pour_events)
         self.monitor_thread.daemon = True
         self.monitor_thread.start()
@@ -365,7 +365,7 @@ class KegFlowTracker(object):
     
     def stop_tracking(self):
         """Stop tracking flow for this keg."""
-        self.stop_monitoring.set()
+        self._stop_event.set()
         if self.monitor_thread.is_alive():
             self.monitor_thread.join(timeout=1.0)
         logger.info("Stopped tracking flow for keg %d" % self.keg_id)

@@ -129,20 +129,28 @@ Common Flow Meters:
   - YF-B1: ~1800 pulses/L, 1-25 L/min flow rate
 
 Wiring (typical 3-wire flow meter):
-  - Red wire (VCC)    -> Raspberry Pi 5V (pin 2 or 4)
-  - Black wire (GND)  -> Raspberry Pi GND (pin 6, 9, 14, 20, 25, 30, 34, or 39)
-  - Yellow wire (SIG) -> Raspberry Pi GPIO pin (default: GPIO 18, pin 12)
+  - Red wire (VCC)    -> Raspberry Pi 5V (physical pin 2 or 4)
+  - Black wire (GND)  -> Raspberry Pi GND (physical pin 6, 9, 14, 20, 25, 30, 34, or 39)
+  - Yellow wire (SIG) -> Raspberry Pi GPIO pin (default: GPIO 18 = physical pin 12)
+
+IMPORTANT - Pin Numbering:
+  This script uses BCM (Broadcom) GPIO numbering, NOT physical pin numbers!
+  - When asked for GPIO pin, use BCM number (e.g., 18, 4, 17)
+  - Physical pin 7  = GPIO 4  (BCM)
+  - Physical pin 12 = GPIO 18 (BCM) <- default
+  - Physical pin 26 = GPIO 7  (BCM)
 
 Optional Pull-up Resistor:
   - 10k ohm resistor between Signal (Yellow) and VCC (Red)
   - Some flow meters have built-in pull-ups
 
-Raspberry Pi 2 GPIO Pinout (relevant pins):
-  Pin 2:  5V
-  Pin 4:  5V  
-  Pin 6:  GND
-  Pin 12: GPIO 18 (default signal pin)
-  Pin 14: GND
+Raspberry Pi 4 GPIO Pinout (relevant pins):
+  Physical Pin 2:  5V
+  Physical Pin 4:  5V
+  Physical Pin 6:  GND
+  Physical Pin 7:  GPIO 4  (BCM)
+  Physical Pin 12: GPIO 18 (BCM) <- default signal pin
+  Physical Pin 14: GND
 
 Installation:
   1. Power off Raspberry Pi
